@@ -1,0 +1,75 @@
+spring:
+  application:
+    name: academy-platform-backend
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:academy_platform}
+    username: ${DB_USER:academy_user}
+    password: ${DB_PASSWORD:academy_password}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: 0
+      timeout: 2s
+
+  session:
+    store-type: redis
+    timeout: 30m
+    redis:
+      namespace: academy:session
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    session:
+      cookie:
+        name: ACADEMY_SESSION
+        http-only: true
+        secure: ${COOKIE_SECURE:false}
+        same-site: lax
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+  endpoint:
+    health:
+      show-details: when_authorized
+
+logging:
+  level:
+    root: INFO
+    com.academy.platform: DEBUG
+
+app:
+  bootstrap:
+    enabled: ${BOOTSTRAP_ENABLED:false}
+    organization-name: ${BOOTSTRAP_ORGANIZATION_NAME:Demo Academy}
+    organization-slug: ${BOOTSTRAP_ORGANIZATION_SLUG:demo-academy}
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+    admin-first-name: ${BOOTSTRAP_ADMIN_FIRST_NAME:System}
+    admin-last-name: ${BOOTSTRAP_ADMIN_LAST_NAME:Administrator}
