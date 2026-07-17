@@ -1,125 +1,110 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 
-import {
-  getCurrentUser,
-  logout,
-} from "@/features/auth/api";
-
-import type {
-  AuthenticatedUser,
-} from "@/features/auth/types";
+import { DashboardHeader } from "@/components/dashboard-header";
+import { getCurrentUser } from "@/features/auth/api";
+import { ApiError } from "@/lib/api/api-client";
 
 export default function DashboardPage() {
   const router = useRouter();
 
-  const [user, setUser] =
-    useState<AuthenticatedUser | null>(null);
-
-  const [loading, setLoading] = useState(true);
+  const currentUserQuery = useQuery({
+    queryKey: ["current-user"],
+    queryFn: getCurrentUser,
+  });
 
   useEffect(() => {
-    async function loadCurrentUser() {
-      try {
-        const currentUser = await getCurrentUser();
-        setUser(currentUser);
-      } catch {
-        router.replace("/login");
-      } finally {
-        setLoading(false);
-      }
+    if (
+      currentUserQuery.error instanceof ApiError &&
+      currentUserQuery.error.status === 401
+    ) {
+      router.replace("/login");
     }
+  }, [currentUserQuery.error, router]);
 
-    void loadCurrentUser();
-  }, [router]);
-
-  async function handleLogout() {
-    await logout();
-    router.replace("/login");
-    router.refresh();
-  }
-
-  if (loading) {
+  if (currentUserQuery.isPending) {
     return (
-      <main className="p-8">
-        Loading...
+      <main className="flex min-h-screen items-center justify-center bg-slate-100">
+        Loading dashboard...
       </main>
     );
   }
 
-  if (!user) {
-    return null;
+  if (
+    currentUserQuery.isError ||
+    !currentUserQuery.data
+  ) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100">
+        <div className="rounded-lg bg-red-50 p-5 text-red-700">
+          The dashboard could not be loaded.
+        </div>
+      </main>
+    );
   }
 
+  const user = currentUserQuery.data;
+
   return (
-    <main className="min-h-screen bg-slate-100 p-8">
-      <div className="mx-auto max-w-5xl">
-        <header className="flex items-center justify-between rounded-xl bg-white p-6 shadow">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              {user.organization.name}
-            </h1>
+    <div className="min-h-screen bg-slate-100">
+      <DashboardHeader user={user} />
 
-            <p className="mt-1 text-slate-600">
-              Welcome, {user.firstName} {user.lastName}
+      <main className="mx-auto max-w-7xl p-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            Dashboard
+          </h1>
+
+          <p className="mt-1 text-slate-600">
+            Welcome, {user.firstName} {user.lastName}.
+          </p>
+        </div>
+
+        <section className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+          <article className="rounded-xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">
+              Organization
             </p>
-          </div>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
-          >
-            Sign out
-          </button>
-        </header>
+            <p className="mt-2 text-lg font-semibold">
+              {user.organization.name}
+            </p>
+          </article>
 
-        <section className="mt-6 rounded-xl bg-white p-6 shadow">
-          <h2 className="text-lg font-semibold">
-            Authentication information
-          </h2>
+          <article className="rounded-xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">
+              Roles
+            </p>
 
-          <dl className="mt-4 grid gap-4 md:grid-cols-2">
-            <div>
-              <dt className="text-sm text-slate-500">
-                Email
-              </dt>
-              <dd className="font-medium">
-                {user.email}
-              </dd>
-            </div>
+            <p className="mt-2 text-lg font-semibold">
+              {user.roles.join(", ")}
+            </p>
+          </article>
 
-            <div>
-              <dt className="text-sm text-slate-500">
-                Organization
-              </dt>
-              <dd className="font-medium">
-                {user.organization.slug}
-              </dd>
-            </div>
+          <article className="rounded-xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">
+              Permissions
+            </p>
 
-            <div>
-              <dt className="text-sm text-slate-500">
-                Roles
-              </dt>
-              <dd className="font-medium">
-                {user.roles.join(", ")}
-              </dd>
-            </div>
+            <p className="mt-2 text-lg font-semibold">
+              {user.permissions.length}
+            </p>
+          </article>
 
-            <div>
-              <dt className="text-sm text-slate-500">
-                Permission count
-              </dt>
-              <dd className="font-medium">
-                {user.permissions.length}
-              </dd>
-            </div>
-          </dl>
+          <article className="rounded-xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">
+              Status
+            </p>
+
+            <p className="mt-2 text-lg font-semibold text-green-600">
+              Active
+            </p>
+          </article>
         </section>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

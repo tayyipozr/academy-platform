@@ -5,19 +5,21 @@ import java.util.UUID;
 
 public record CurrentUserResponse(
         UUID id,
+        UUID membershipId,
         String email,
         String firstName,
         String lastName,
         OrganizationResponse organization,
         Set<String> roles,
         Set<String> permissions
-) {
+        ) {
 
     public static CurrentUserResponse from(
             AuthenticatedUser authenticatedUser
     ) {
         return new CurrentUserResponse(
                 authenticatedUser.userId(),
+                authenticatedUser.membershipId(),
                 authenticatedUser.email(),
                 authenticatedUser.firstName(),
                 authenticatedUser.lastName(),
@@ -35,6 +37,7 @@ public record CurrentUserResponse(
             UUID id,
             String name,
             String slug
-    ) {
+            ) {
+
     }
 }

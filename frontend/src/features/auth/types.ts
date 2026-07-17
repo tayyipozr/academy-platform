@@ -6,14 +6,17 @@ export type LoginRequest = {
 
 export type AuthenticatedUser = {
   id: string;
+  membershipId: string;
   email: string;
   firstName: string;
   lastName: string;
+
   organization: {
     id: string;
     name: string;
     slug: string;
   };
+
   roles: string[];
   permissions: string[];
 };

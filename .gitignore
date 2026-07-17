@@ -1,0 +1,27 @@
+# Environment
+.env
+.env.local
+.env.production
+
+# Java
+backend/target/
+backend/.idea/
+backend/*.iml
+
+# Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/coverage/
+
+# Editors
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Logs
+*.log
+
+# Docker data
+docker-data/

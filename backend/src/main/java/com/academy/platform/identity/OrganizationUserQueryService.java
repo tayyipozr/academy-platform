@@ -7,11 +7,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import com.academy.platform.common.PageResponse;
-
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.academy.platform.common.PageResponse;
 
 @Service
 public class OrganizationUserQueryService {
@@ -35,8 +35,8 @@ public class OrganizationUserQueryService {
                 ? ""
                 : search.trim().toLowerCase();
 
-        String searchPattern =
-                "%" + normalizedSearch + "%";
+        String searchPattern
+                = "%" + normalizedSearch + "%";
 
         long totalElements = countUsers(
                 organizationId,
@@ -44,83 +44,83 @@ public class OrganizationUserQueryService {
         );
 
         int offset = page * size;
-
-        List<OrganizationUserResponse> users =
-                jdbcTemplate.query(
+        List<OrganizationUserResponse> users
+                = jdbcTemplate.query(
                         """
-                        SELECT
-                            u.id AS user_id,
-                            om.id AS membership_id,
-                            om.display_first_name,
-                            om.display_last_name,
-                            u.last_name,
-                            om.status,
-                            om.joined_at,
-                            u.last_login_at,
+                SELECT
+                    u.id AS user_id,
+                    om.id AS membership_id,
+                    u.email,
+                    om.display_first_name,
+                    om.display_last_name,
+                    om.status,
+                    om.joined_at,
+                    u.last_login_at,
 
-                            COALESCE(
-                                ARRAY_AGG(r.id ORDER BY r.name)
-                                    FILTER (WHERE r.id IS NOT NULL),
-                                ARRAY[]::UUID[]
-                            ) AS role_ids,
+                    COALESCE(
+                        ARRAY_AGG(r.id ORDER BY r.name)
+                            FILTER (WHERE r.id IS NOT NULL),
+                        ARRAY[]::UUID[]
+                    ) AS role_ids,
 
-                            COALESCE(
-                                ARRAY_AGG(r.name ORDER BY r.name)
-                                    FILTER (WHERE r.name IS NOT NULL),
-                                ARRAY[]::VARCHAR[]
-                            ) AS role_names
+                    COALESCE(
+                        ARRAY_AGG(r.name ORDER BY r.name)
+                            FILTER (WHERE r.name IS NOT NULL),
+                        ARRAY[]::VARCHAR[]
+                    ) AS role_names
 
-                        FROM organization_memberships om
-                        JOIN users u
-                            ON u.id = om.user_id
+                FROM organization_memberships om
 
-                        LEFT JOIN membership_roles mr
-                            ON mr.membership_id = om.id
+                JOIN users u
+                    ON u.id = om.user_id
 
-                        LEFT JOIN roles r
-                            ON r.id = mr.role_id
-                           AND r.organization_id =
-                               om.organization_id
+                LEFT JOIN membership_roles mr
+                    ON mr.membership_id = om.id
 
-                        WHERE om.organization_id = ?
-                          AND (
-                              ? = '%%'
-                              OR LOWER(om.display_first_name) LIKE ?
-                              OR LOWER(om.display_last_name) LIKE ?
-                              OR LOWER(
-                                  om.display_first_name || ' '
-                                  || om.display_last_name
-                              ) LIKE ?
-                          )
+                LEFT JOIN roles r
+                    ON r.id = mr.role_id
+                   AND r.organization_id =
+                       om.organization_id
 
-                        GROUP BY
-                        u.id,
-                        om.id,
-                        u.email,
-                        om.display_first_name,
-                        om.display_last_name,
-                        om.status,
-                        om.joined_at,
-                        u.last_login_at
+                WHERE om.organization_id = ?
+                  AND (
+                      ? = '%%'
+                      OR LOWER(u.email) LIKE ?
+                      OR LOWER(om.display_first_name) LIKE ?
+                      OR LOWER(om.display_last_name) LIKE ?
+                      OR LOWER(
+                          om.display_first_name || ' '
+                          || om.display_last_name
+                      ) LIKE ?
+                  )
 
-                        ORDER BY
-                            u.first_name,
-                            u.last_name,
-                            u.email
+                GROUP BY
+                    u.id,
+                    om.id,
+                    u.email,
+                    om.display_first_name,
+                    om.display_last_name,
+                    om.status,
+                    om.joined_at,
+                    u.last_login_at
 
-                        LIMIT ?
-                        OFFSET ?
-                        """,
+                ORDER BY
+                    om.display_first_name,
+                    om.display_last_name,
+                    u.email
+
+                LIMIT ?
+                OFFSET ?
+                """,
                         (resultSet, rowNumber) -> {
-                            List<OrganizationUserResponse.RoleSummary>
-                                    roles = mapRoles(
-                                            resultSet.getArray(
-                                                    "role_ids"
-                                            ),
-                                            resultSet.getArray(
-                                                    "role_names"
-                                            )
-                                    );
+                            List<OrganizationUserResponse.RoleSummary> roles = mapRoles(
+                                    resultSet.getArray(
+                                            "role_ids"
+                                    ),
+                                    resultSet.getArray(
+                                            "role_names"
+                                    )
+                            );
 
                             return new OrganizationUserResponse(
                                     resultSet.getObject(
@@ -132,8 +132,12 @@ public class OrganizationUserQueryService {
                                             UUID.class
                                     ),
                                     resultSet.getString("email"),
-                                    resultSet.getString("display_first_name"),
-                                    resultSet.getString("display_last_name"),
+                                    resultSet.getString(
+                                            "display_first_name"
+                                    ),
+                                    resultSet.getString(
+                                            "display_last_name"
+                                    ),
                                     resultSet.getString("status"),
                                     roles,
                                     resultSet.getObject(
@@ -170,21 +174,25 @@ public class OrganizationUserQueryService {
     ) {
         Long result = jdbcTemplate.queryForObject(
                 """
-                SELECT COUNT(*)
-                FROM organization_memberships om
-                JOIN users u
-                    ON u.id = om.user_id
-                WHERE om.organization_id = ?
-                  AND (
-                      ? = '%%'
-                      OR LOWER(u.email) LIKE ?
-                      OR LOWER(u.first_name) LIKE ?
-                      OR LOWER(u.last_name) LIKE ?
-                      OR LOWER(
-                          u.first_name || ' ' || u.last_name
-                      ) LIKE ?
-                  )
-                """,
+            SELECT COUNT(*)
+
+            FROM organization_memberships om
+
+            JOIN users u
+                ON u.id = om.user_id
+
+            WHERE om.organization_id = ?
+              AND (
+                  ? = '%%'
+                  OR LOWER(u.email) LIKE ?
+                  OR LOWER(om.display_first_name) LIKE ?
+                  OR LOWER(om.display_last_name) LIKE ?
+                  OR LOWER(
+                      om.display_first_name || ' '
+                      || om.display_last_name
+                  ) LIKE ?
+              )
+            """,
                 Long.class,
                 organizationId,
                 searchPattern,
@@ -204,8 +212,8 @@ public class OrganizationUserQueryService {
         Object[] roleIds = (Object[]) roleIdsArray.getArray();
         Object[] roleNames = (Object[]) roleNamesArray.getArray();
 
-        List<OrganizationUserResponse.RoleSummary> roles =
-                new ArrayList<>();
+        List<OrganizationUserResponse.RoleSummary> roles
+                = new ArrayList<>();
 
         for (int index = 0; index < roleIds.length; index++) {
             UUID roleId = roleIds[index] instanceof UUID uuid

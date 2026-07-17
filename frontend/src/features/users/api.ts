@@ -84,3 +84,26 @@ export function reactivateUser(
     },
   );
 }
+
+export type AcceptInvitationRequest = {
+  token: string;
+  password: string;
+};
+
+export type AcceptInvitationResponse = {
+  organizationSlug: string;
+  email: string;
+  accepted: boolean;
+};
+
+export function acceptInvitation(
+  request: AcceptInvitationRequest,
+): Promise<AcceptInvitationResponse> {
+  return apiRequest<AcceptInvitationResponse>(
+    "/invitations/accept",
+    {
+      method: "POST",
+      body: JSON.stringify(request),
+    },
+  );
+}
