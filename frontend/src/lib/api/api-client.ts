@@ -1,8 +1,20 @@
+export type ApiFieldError = {
+  field: string;
+  message: string;
+};
+
+export type ApiErrorBody = {
+  code?: string;
+  message?: string;
+  fieldErrors?: ApiFieldError[];
+  timestamp?: string;
+};
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
-    public readonly body?: unknown,
+    public readonly body?: ApiErrorBody,
   ) {
     super(message);
     this.name = "ApiError";
@@ -24,11 +36,14 @@ function requiresCsrf(method: string): boolean {
 }
 
 export async function initializeCsrf(): Promise<string> {
-  const response = await fetch("/backend/api/v1/auth/csrf", {
-    method: "GET",
-    credentials: "include",
-    cache: "no-store",
-  });
+  const response = await fetch(
+    "/backend/api/v1/auth/csrf",
+    {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    },
+  );
 
   if (!response.ok) {
     throw new ApiError(
@@ -37,17 +52,30 @@ export async function initializeCsrf(): Promise<string> {
     );
   }
 
-  const body = (await response.json()) as CsrfResponse;
-  csrfToken = body.token;
+  const result =
+    (await response.json()) as CsrfResponse;
 
-  return csrfToken;
+  csrfToken = result.token;
+
+  return result.token;
+}
+
+async function parseErrorBody(
+  response: Response,
+): Promise<ApiErrorBody | undefined> {
+  try {
+    return (await response.json()) as ApiErrorBody;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function apiRequest<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const method = options.method?.toUpperCase() ?? "GET";
+  const method =
+    options.method?.toUpperCase() ?? "GET";
 
   if (requiresCsrf(method) && csrfToken === null) {
     await initializeCsrf();
@@ -55,7 +83,10 @@ export async function apiRequest<T>(
 
   const headers = new Headers(options.headers);
 
-  if (options.body !== undefined && !headers.has("Content-Type")) {
+  if (
+    options.body !== undefined &&
+    !headers.has("Content-Type")
+  ) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -63,33 +94,47 @@ export async function apiRequest<T>(
     headers.set("X-XSRF-TOKEN", csrfToken);
   }
 
-  const response = await fetch(`/backend/api/v1${path}`, {
-    ...options,
-    method,
-    headers,
-    credentials: "include",
-    cache: "no-store",
-  });
+  const response = await fetch(
+    `/backend/api/v1${path}`,
+    {
+      ...options,
+      method,
+      headers,
+      credentials: "include",
+      cache: "no-store",
+    },
+  );
 
   if (!response.ok) {
-    let body: unknown;
+    const body = await parseErrorBody(response);
 
-    try {
-      body = await response.json();
-    } catch {
-      body = undefined;
+    if (
+      response.status === 401 &&
+      body?.code === "SESSION_INVALIDATED"
+    ) {
+      csrfToken = null;
     }
 
     throw new ApiError(
       response.status,
+      body?.message ??
       `API request failed with status ${response.status}.`,
       body,
     );
   }
 
-  if (response.status === 204) {
+  if (
+    response.status === 204 ||
+    response.headers.get("Content-Length") === "0"
+  ) {
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  const responseText = await response.text();
+
+  if (responseText.length === 0) {
+    return undefined as T;
+  }
+
+  return JSON.parse(responseText) as T;
 }
