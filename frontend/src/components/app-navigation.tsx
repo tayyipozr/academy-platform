@@ -46,6 +46,15 @@ const navigationItems: NavigationItem[] = [
     href: "/dashboard/settings",
     label: "Settings",
     permission: "organization.settings.read",
+  }, {
+    href: "/dashboard/staff",
+    label: "Staff",
+    permission: "staff.read",
+  },
+  {
+    href: "/dashboard/guardians",
+    label: "Guardians",
+    permission: "guardians.read",
   },
 ];
 
@@ -78,8 +87,8 @@ export function AppNavigation({
             key={item.href}
             href={item.href}
             className={`rounded-lg px-3 py-2 text-sm font-medium transition ${active
-                ? "bg-blue-100 text-blue-700"
-                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              ? "bg-blue-100 text-blue-700"
+              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               }`}
           >
             {item.label}
