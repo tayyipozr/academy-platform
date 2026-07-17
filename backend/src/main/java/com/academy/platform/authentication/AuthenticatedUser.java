@@ -2,6 +2,7 @@ package com.academy.platform.authentication;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.security.Principal;
 import java.util.Set;
 import java.util.UUID;
 
@@ -9,6 +10,7 @@ public record AuthenticatedUser(
         UUID userId,
         UUID organizationId,
         UUID membershipId,
+        long securityVersion,
         String organizationName,
         String organizationSlug,
         String email,
@@ -16,7 +18,7 @@ public record AuthenticatedUser(
         String lastName,
         Set<String> roles,
         Set<String> permissions
-) implements Serializable {
+) implements Serializable, Principal {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -24,6 +26,11 @@ public record AuthenticatedUser(
     public AuthenticatedUser {
         roles = Set.copyOf(roles);
         permissions = Set.copyOf(permissions);
+    }
+
+    @Override
+    public String getName() {
+        return userId.toString();
     }
 
     public String fullName() {

@@ -206,26 +206,43 @@ public class BootstrapService {
             OffsetDateTime now = now();
 
             jdbcTemplate.update(
-                    """
-                    INSERT INTO organization_memberships
-                    (
+                        """
+                        INSERT INTO organization_memberships
+                        (
                         id,
                         organization_id,
                         user_id,
                         status,
+                        display_first_name,
+                        display_last_name,
+                        security_version,
                         joined_at,
                         created_at,
                         updated_at,
                         version
-                    )
-                    VALUES (?, ?, ?, 'ACTIVE', ?, ?, ?, 0)
-                    """,
-                    id,
-                    organizationId,
-                    userId,
-                    now,
-                    now,
-                    now
+                        )
+                        VALUES (
+                        ?,
+                        ?,
+                        ?,
+                        'ACTIVE',
+                        ?,
+                        ?,
+                        0,
+                        ?,
+                        ?,
+                        ?,
+                        0
+                        )
+                        """,
+                        id,
+                        organizationId,
+                        userId,
+                        adminFirstName.trim(),
+                        adminLastName.trim(),
+                        now,
+                        now,
+                        now
             );
 
             return id;

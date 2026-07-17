@@ -77,6 +77,7 @@ public class AuthenticationService {
                 loginAccount.userId(),
                 loginAccount.organizationId(),
                 loginAccount.membershipId(),
+                loginAccount.securityVersion(),
                 loginAccount.organizationName(),
                 loginAccount.organizationSlug(),
                 loginAccount.email(),
@@ -88,8 +89,8 @@ public class AuthenticationService {
     }
 
     private Optional<LoginAccount> findAccount(
-            String email,
-            String organizationSlug
+        String email,
+        String organizationSlug
     ) {
         return jdbcTemplate.query(
                 """
@@ -97,22 +98,37 @@ public class AuthenticationService {
                     u.id AS user_id,
                     u.email,
                     u.password_hash,
-                    u.first_name,
-                    u.last_name,
+
+                    COALESCE(
+                        om.display_first_name,
+                        u.first_name
+                    ) AS first_name,
+
+                    COALESCE(
+                        om.display_last_name,
+                        u.last_name
+                    ) AS last_name,
+
                     o.id AS organization_id,
                     o.name AS organization_name,
                     o.slug AS organization_slug,
-                    om.id AS membership_id
+
+                    om.id AS membership_id,
+                    om.security_version
+
                 FROM users u
+
                 JOIN organization_memberships om
                     ON om.user_id = u.id
+
                 JOIN organizations o
                     ON o.id = om.organization_id
+
                 WHERE LOWER(u.email) = LOWER(?)
-                  AND LOWER(o.slug) = LOWER(?)
-                  AND u.status = 'ACTIVE'
-                  AND om.status = 'ACTIVE'
-                  AND o.status = 'ACTIVE'
+                AND LOWER(o.slug) = LOWER(?)
+                AND u.status = 'ACTIVE'
+                AND om.status = 'ACTIVE'
+                AND o.status = 'ACTIVE'
                 """,
                 (resultSet, rowNumber) -> mapAccount(resultSet),
                 email,
@@ -125,8 +141,15 @@ public class AuthenticationService {
 
         return new LoginAccount(
                 resultSet.getObject("user_id", UUID.class),
-                resultSet.getObject("organization_id", UUID.class),
-                resultSet.getObject("membership_id", UUID.class),
+                resultSet.getObject(
+                        "organization_id",
+                        UUID.class
+                ),
+                resultSet.getObject(
+                        "membership_id",
+                        UUID.class
+                ),
+                resultSet.getLong("security_version"),
                 resultSet.getString("organization_name"),
                 resultSet.getString("organization_slug"),
                 resultSet.getString("email"),
@@ -175,15 +198,16 @@ public class AuthenticationService {
     }
 
     private record LoginAccount(
-            UUID userId,
-            UUID organizationId,
-            UUID membershipId,
-            String organizationName,
-            String organizationSlug,
-            String email,
-            String passwordHash,
-            String firstName,
-            String lastName
+        UUID userId,
+        UUID organizationId,
+        UUID membershipId,
+        long securityVersion,
+        String organizationName,
+        String organizationSlug,
+        String email,
+        String passwordHash,
+        String firstName,
+        String lastName
     ) {
     }
 }

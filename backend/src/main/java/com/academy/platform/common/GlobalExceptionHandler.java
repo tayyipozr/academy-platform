@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import jakarta.validation.ConstraintViolationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -86,6 +87,31 @@ public class GlobalExceptionHandler {
                 Instant.now()
         );
     }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiErrorResponse handleConstraintViolation(
+            ConstraintViolationException exception
+    ) {
+        List<ApiErrorResponse.FieldErrorResponse> fieldErrors =
+                exception.getConstraintViolations()
+                        .stream()
+                        .map(violation ->
+                                new ApiErrorResponse.FieldErrorResponse(
+                                        violation.getPropertyPath()
+                                                .toString(),
+                                        violation.getMessage()
+                                )
+                        )
+                        .toList();
+    
+        return new ApiErrorResponse(
+                "VALIDATION_ERROR",
+                "One or more request parameters are invalid.",
+                fieldErrors,
+                Instant.now()
+        );
+    }    
 
     private ApiErrorResponse.FieldErrorResponse mapFieldError(
             FieldError error

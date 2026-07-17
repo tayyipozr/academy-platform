@@ -51,8 +51,8 @@ public class OrganizationUserQueryService {
                         SELECT
                             u.id AS user_id,
                             om.id AS membership_id,
-                            u.email,
-                            u.first_name,
+                            om.display_first_name,
+                            om.display_last_name,
                             u.last_name,
                             om.status,
                             om.joined_at,
@@ -85,23 +85,23 @@ public class OrganizationUserQueryService {
                         WHERE om.organization_id = ?
                           AND (
                               ? = '%%'
-                              OR LOWER(u.email) LIKE ?
-                              OR LOWER(u.first_name) LIKE ?
-                              OR LOWER(u.last_name) LIKE ?
+                              OR LOWER(om.display_first_name) LIKE ?
+                              OR LOWER(om.display_last_name) LIKE ?
                               OR LOWER(
-                                  u.first_name || ' ' || u.last_name
+                                  om.display_first_name || ' '
+                                  || om.display_last_name
                               ) LIKE ?
                           )
 
                         GROUP BY
-                            u.id,
-                            om.id,
-                            u.email,
-                            u.first_name,
-                            u.last_name,
-                            om.status,
-                            om.joined_at,
-                            u.last_login_at
+                        u.id,
+                        om.id,
+                        u.email,
+                        om.display_first_name,
+                        om.display_last_name,
+                        om.status,
+                        om.joined_at,
+                        u.last_login_at
 
                         ORDER BY
                             u.first_name,
@@ -132,12 +132,8 @@ public class OrganizationUserQueryService {
                                             UUID.class
                                     ),
                                     resultSet.getString("email"),
-                                    resultSet.getString(
-                                            "first_name"
-                                    ),
-                                    resultSet.getString(
-                                            "last_name"
-                                    ),
+                                    resultSet.getString("display_first_name"),
+                                    resultSet.getString("display_last_name"),
                                     resultSet.getString("status"),
                                     roles,
                                     resultSet.getObject(
