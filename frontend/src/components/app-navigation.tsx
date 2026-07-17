@@ -37,6 +37,16 @@ const navigationItems: NavigationItem[] = [
     label: "Reports",
     permission: "reports.read",
   },
+  {
+    href: "/dashboard/branches",
+    label: "Branches",
+    permission: "branches.read",
+  },
+  {
+    href: "/dashboard/settings",
+    label: "Settings",
+    permission: "organization.settings.read",
+  },
 ];
 
 export function AppNavigation({
@@ -67,11 +77,10 @@ export function AppNavigation({
           <Link
             key={item.href}
             href={item.href}
-            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-              active
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${active
                 ? "bg-blue-100 text-blue-700"
                 : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-            }`}
+              }`}
           >
             {item.label}
           </Link>
@@ -79,4 +88,5 @@ export function AppNavigation({
       })}
     </nav>
   );
+
 }
