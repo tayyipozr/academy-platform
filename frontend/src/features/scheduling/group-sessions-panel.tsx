@@ -55,14 +55,14 @@ import { getApiErrorMessage } from "@/lib/api/error-message";
 type DialogState =
   | { type: "create" }
   | {
-      type: "reschedule";
-      session: LessonSession;
-    }
+    type: "reschedule";
+    session: LessonSession;
+  }
   | {
-      type: "status";
-      session: LessonSession;
-      targetStatus: SessionStatus;
-    }
+    type: "status";
+    session: LessonSession;
+    targetStatus: SessionStatus;
+  }
   | null;
 
 type GroupSessionsPanelProps = {
@@ -71,6 +71,7 @@ type GroupSessionsPanelProps = {
   staffAssignments: GroupStaffAssignment[];
   canRead: boolean;
   canManage: boolean;
+  canReadAttendance: boolean;
 };
 
 export function GroupSessionsPanel({
@@ -79,6 +80,7 @@ export function GroupSessionsPanel({
   staffAssignments,
   canRead,
   canManage,
+  canReadAttendance,
 }: GroupSessionsPanelProps) {
   const queryClient = useQueryClient();
 
@@ -317,8 +319,8 @@ export function GroupSessionsPanel({
           onChange={(event) =>
             setStatus(
               event.target.value as
-                | SessionStatus
-                | "",
+              | SessionStatus
+              | "",
             )
           }
           className="rounded-lg border px-3 py-2"
@@ -356,6 +358,7 @@ export function GroupSessionsPanel({
         <SessionTable
           sessions={sessionsQuery.data ?? []}
           canManage={canManage}
+          canReadAttendance={canReadAttendance}
           onReschedule={(session) =>
             openDialog({
               type: "reschedule",

@@ -128,6 +128,11 @@ export default function GroupSchedulePage() {
         "sessions.manage",
     );
 
+    const canReadAttendance = hasPermission(
+        currentUser,
+        "attendance.read",
+    );
+
     const groupQuery = useQuery({
         queryKey: groupQueryKeys.detail(groupId),
         queryFn: () => getGroup(groupId),
@@ -697,6 +702,7 @@ export default function GroupSchedulePage() {
                     staffAssignments={staffAssignments}
                     canRead={canRead}
                     canManage={canManageSessions}
+                    canReadAttendance={canReadAttendance}
                 />
 
             </main>

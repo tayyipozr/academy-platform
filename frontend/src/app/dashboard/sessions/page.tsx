@@ -40,14 +40,14 @@ import { hasPermission } from "@/lib/permissions";
 
 type DialogState =
   | {
-      type: "reschedule";
-      session: LessonSession;
-    }
+    type: "reschedule";
+    session: LessonSession;
+  }
   | {
-      type: "status";
-      session: LessonSession;
-      targetStatus: SessionStatus;
-    }
+    type: "status";
+    session: LessonSession;
+    targetStatus: SessionStatus;
+  }
   | null;
 
 export default function SessionsPage() {
@@ -91,6 +91,11 @@ export default function SessionsPage() {
   const canManage = hasPermission(
     currentUser,
     "sessions.manage",
+  );
+
+  const canReadAttendance = hasPermission(
+    currentUser,
+    "attendance.read",
   );
 
   const filters = {
@@ -253,8 +258,8 @@ export default function SessionsPage() {
                 onChange={(event) =>
                   setStatus(
                     event.target.value as
-                      | SessionStatus
-                      | "",
+                    | SessionStatus
+                    | "",
                   )
                 }
                 className="rounded-lg border px-3 py-2"
@@ -297,6 +302,7 @@ export default function SessionsPage() {
                     sessionsQuery.data ?? []
                   }
                   canManage={canManage}
+                  canReadAttendance={canReadAttendance}
                   onReschedule={(session) => {
                     setDialogError(null);
                     setDialog({

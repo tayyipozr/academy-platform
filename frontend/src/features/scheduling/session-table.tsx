@@ -10,6 +10,7 @@ import type {
 type SessionTableProps = {
   sessions: LessonSession[];
   canManage: boolean;
+  canReadAttendance?: boolean;
   onReschedule: (
     session: LessonSession,
   ) => void;
@@ -22,6 +23,7 @@ type SessionTableProps = {
 export function SessionTable({
   sessions,
   canManage,
+  canReadAttendance = false,
   onReschedule,
   onStatusChange,
 }: SessionTableProps) {
@@ -121,7 +123,19 @@ export function SessionTable({
                 />
               </td>
 
-              <td className="p-4">
+              <div className="flex flex-wrap gap-2">
+                {canReadAttendance &&
+                  !["CANCELLED", "POSTPONED"].includes(
+                    session.status,
+                  ) && (
+                    <Link
+                      href={`/dashboard/sessions/${session.id}/attendance`}
+                      className="rounded border border-green-300 px-3 py-1.5 text-sm text-green-700"
+                    >
+                      Attendance
+                    </Link>
+                  )}
+
                 {canManage && (
                   <SessionActions
                     session={session}
@@ -129,7 +143,7 @@ export function SessionTable({
                     onStatusChange={onStatusChange}
                   />
                 )}
-              </td>
+              </div>
             </tr>
           ))}
         </tbody>
