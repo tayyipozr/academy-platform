@@ -530,9 +530,23 @@ export default function GroupDetailPage() {
                         </p>
                     </div>
 
-                    <span className="rounded-full bg-slate-200 px-3 py-1 text-sm font-medium">
-                        {group.status}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-3">
+                        {hasPermission(
+                            currentUser,
+                            "sessions.read",
+                        ) && (
+                                <Link
+                                    href={`/dashboard/groups/${group.id}/schedule`}
+                                    className="rounded-lg border border-blue-300 px-4 py-2 font-medium text-blue-700"
+                                >
+                                    Manage schedule
+                                </Link>
+                            )}
+
+                        <span className="rounded-full bg-slate-200 px-3 py-1 text-sm font-medium">
+                            {group.status}
+                        </span>
+                    </div>
                 </header>
 
                 <section className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
