@@ -36,6 +36,7 @@ import { groupQueryKeys } from "@/features/groups/query-keys";
 
 import { StaffAssignmentDialog } from "@/features/groups/staff-assignment-dialog";
 import type { StaffAssignmentFormValues } from "@/features/groups/staff-assignment-schema";
+import { GroupCurriculumPanel } from "@/features/group-curricula/group-curriculum-panel";
 
 import type {
     GroupEnrollment,
@@ -96,6 +97,16 @@ export default function GroupDetailPage() {
     const canReadEnrollments = hasPermission(
         currentUser,
         "enrollments.read",
+    );
+
+    const canReadGroupCurricula = hasPermission(
+        currentUser,
+        "group_curricula.read",
+    );
+
+    const canManageGroupCurricula = hasPermission(
+        currentUser,
+        "group_curricula.manage",
     );
 
     const canManageEnrollments = hasPermission(
@@ -582,6 +593,12 @@ export default function GroupDetailPage() {
                         />
                     </dl>
                 </section>
+
+                <GroupCurriculumPanel
+                    group={group}
+                    canRead={canReadGroupCurricula}
+                    canManage={canManageGroupCurricula}
+                />
 
                 {canReadEnrollments && (
                     <section className="mt-6 overflow-hidden rounded-xl bg-white shadow-sm">

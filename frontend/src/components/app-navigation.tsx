@@ -35,6 +35,10 @@ const navigationItems: NavigationItem[] = [
     href: "/dashboard/terms",
     label: "Terms",
     permission: "terms.read",
+  }, {
+    href: "/dashboard/curricula",
+    label: "Curricula",
+    permission: "curricula.read",
   },
   {
     href: "/dashboard/groups",
@@ -64,7 +68,7 @@ const navigationItems: NavigationItem[] = [
     href: "/dashboard/guardians",
     label: "Guardians",
     permission: "guardians.read",
-  },
+  }
 ];
 
 export function AppNavigation({
