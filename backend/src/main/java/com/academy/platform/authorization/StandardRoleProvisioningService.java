@@ -71,7 +71,8 @@ public class StandardRoleProvisioningService {
                         "enrollments.read",
                         "group_staff.read",
                         "group_curricula.read",
-                        "attendance.finalize"
+                        "attendance.finalize",
+                        "attendance.correct"
                 )
         );
 

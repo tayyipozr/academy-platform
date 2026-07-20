@@ -11,27 +11,30 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.academy.platform.auditing.AuditService;
 import com.academy.platform.authentication.AuthenticatedUser;
 import com.academy.platform.common.BusinessRuleException;
 import com.academy.platform.common.ResourceNotFoundException;
-
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AttendanceService {
 
     private final JdbcTemplate jdbcTemplate;
     private final AuditService auditService;
+    private final AttendanceCorrectionService correctionService;
 
     public AttendanceService(
             JdbcTemplate jdbcTemplate,
-            AuditService auditService
+            AuditService auditService,
+            AttendanceCorrectionService correctionService
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.auditService = auditService;
+        this.correctionService = correctionService;
     }
 
     @Transactional
@@ -55,8 +58,8 @@ public class AttendanceService {
             );
         }
 
-        OffsetDateTime now =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
         jdbcTemplate.update(
                 """
@@ -148,8 +151,8 @@ public class AttendanceService {
 
         validateAttendanceAccess(actor, session);
 
-        List<AttendanceRecordResponse> records =
-                jdbcTemplate.query(
+        List<AttendanceRecordResponse> records
+                = jdbcTemplate.query(
                         """
                         SELECT
                             ar.id,
@@ -181,8 +184,8 @@ public class AttendanceService {
                             s.last_name,
                             s.student_number
                         """,
-                        (resultSet, rowNumber) ->
-                                mapAttendanceRecord(resultSet),
+                        (resultSet, rowNumber)
+                        -> mapAttendanceRecord(resultSet),
                         actor.organizationId(),
                         sessionId
                 );
@@ -213,14 +216,20 @@ public class AttendanceService {
 
         validateUniqueStudents(request.records());
 
-        Set<UUID> rosterStudentIds =
-                findRosterStudentIds(
+        Set<UUID> rosterStudentIds
+                = findRosterStudentIds(
                         actor.organizationId(),
                         sessionId
                 );
 
-        OffsetDateTime now =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now
+                = OffsetDateTime.now(ZoneOffset.UTC);
+
+        UUID openCorrectionId
+                = correctionService.findOpenCorrectionId(
+                        actor.organizationId(),
+                        sessionId
+                );
 
         for (AttendanceRecordRequest record
                 : request.records()) {
@@ -230,11 +239,18 @@ public class AttendanceService {
             )) {
                 throw new BusinessRuleException(
                         "One or more students are not part "
-                                + "of the session attendance roster."
+                        + "of the session attendance roster."
                 );
             }
 
             validateRecord(record);
+
+            AttendanceCorrectionService.ExistingAttendanceRecord previousRecord
+                    = correctionService.findExistingAttendanceRecord(
+                            actor.organizationId(),
+                            sessionId,
+                            record.studentId()
+                    );
 
             int updatedRows = jdbcTemplate.update(
                     """
@@ -257,11 +273,11 @@ public class AttendanceService {
                     record.departureTime(),
                     normalizeNullable(record.note()),
                     record.status()
-                            == AttendanceStatus.NOT_RECORDED
+                    == AttendanceStatus.NOT_RECORDED
                             ? null
                             : actor.userId(),
                     record.status()
-                            == AttendanceStatus.NOT_RECORDED
+                    == AttendanceStatus.NOT_RECORDED
                             ? null
                             : now,
                     now,
@@ -275,6 +291,19 @@ public class AttendanceService {
                         "Attendance record was not found."
                 );
             }
+
+            if (openCorrectionId != null) {
+                correctionService.recordChange(
+                        actor.organizationId(),
+                        openCorrectionId,
+                        sessionId,
+                        previousRecord,
+                        record,
+                        actor.userId(),
+                        now
+                );
+            }
+
         }
 
         auditService.record(
@@ -283,7 +312,7 @@ public class AttendanceService {
                 "LESSON_SESSION",
                 sessionId,
                 request.records().size()
-                        + " attendance records updated."
+                + " attendance records updated."
         );
 
         return findAttendance(actor, sessionId);
@@ -322,12 +351,12 @@ public class AttendanceService {
         if (totalCount == null || totalCount == 0) {
             throw new BusinessRuleException(
                     "Attendance roster is empty. Initialize "
-                            + "attendance before finalization."
+                    + "attendance before finalization."
             );
         }
 
-        Integer notRecordedCount =
-                jdbcTemplate.queryForObject(
+        Integer notRecordedCount
+                = jdbcTemplate.queryForObject(
                         """
                         SELECT COUNT(*)
                         FROM attendance_records
@@ -344,13 +373,13 @@ public class AttendanceService {
                 && notRecordedCount > 0) {
             throw new BusinessRuleException(
                     "Attendance cannot be finalized while "
-                            + notRecordedCount
-                            + " records remain unrecorded."
+                    + notRecordedCount
+                    + " records remain unrecorded."
             );
         }
 
-        OffsetDateTime finalizedAt =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime finalizedAt
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
         jdbcTemplate.update(
                 """
@@ -371,12 +400,29 @@ public class AttendanceService {
                 actor.organizationId()
         );
 
+        correctionService.completeOpenCorrection(
+                actor.organizationId(),
+                sessionId,
+                actor.userId(),
+                finalizedAt
+        );
+
+        UUID openCorrectionId
+                = correctionService.findOpenCorrectionId(
+                        actor.organizationId(),
+                        sessionId
+                );
+
         auditService.record(
                 actor,
-                "ATTENDANCE_FINALIZED",
+                openCorrectionId == null
+                        ? "ATTENDANCE_FINALIZED"
+                        : "ATTENDANCE_CORRECTION_COMPLETED",
                 "LESSON_SESSION",
                 sessionId,
-                "Session attendance finalized."
+                openCorrectionId == null
+                        ? "Session attendance finalized."
+                        : "Corrected attendance re-finalized."
         );
 
         return findAttendance(actor, sessionId);
@@ -391,6 +437,7 @@ public class AttendanceService {
                 SELECT
                     ls.id,
                     ls.group_id,
+                    ls.organization_id,
                     ag.code AS group_code,
                     ag.name AS group_name,
                     ls.title,
@@ -414,41 +461,45 @@ public class AttendanceService {
 
         return jdbcTemplate.query(
                 sql,
-                (resultSet, rowNumber) ->
-                        new SessionRecord(
-                                resultSet.getObject(
-                                        "id",
-                                        UUID.class
-                                ),
-                                resultSet.getObject(
-                                        "group_id",
-                                        UUID.class
-                                ),
-                                resultSet.getString(
-                                        "group_code"
-                                ),
-                                resultSet.getString(
-                                        "group_name"
-                                ),
-                                resultSet.getString("title"),
-                                resultSet.getObject(
-                                        "scheduled_start",
-                                        OffsetDateTime.class
-                                ),
-                                resultSet.getObject(
-                                        "scheduled_end",
-                                        OffsetDateTime.class
-                                ),
-                                resultSet.getString("status"),
-                                resultSet.getObject(
-                                        "attendance_finalized_at",
-                                        OffsetDateTime.class
-                                ),
-                                resultSet.getObject(
-                                        "attendance_finalized_by",
-                                        UUID.class
-                                )
+                (resultSet, rowNumber)
+                -> new SessionRecord(
+                        resultSet.getObject(
+                                "id",
+                                UUID.class
                         ),
+                        resultSet.getObject(
+                                "group_id",
+                                UUID.class
+                        ),
+                        resultSet.getObject(
+                                "organization_id",
+                                UUID.class
+                        ),
+                        resultSet.getString(
+                                "group_code"
+                        ),
+                        resultSet.getString(
+                                "group_name"
+                        ),
+                        resultSet.getString("title"),
+                        resultSet.getObject(
+                                "scheduled_start",
+                                OffsetDateTime.class
+                        ),
+                        resultSet.getObject(
+                                "scheduled_end",
+                                OffsetDateTime.class
+                        ),
+                        resultSet.getString("status"),
+                        resultSet.getObject(
+                                "attendance_finalized_at",
+                                OffsetDateTime.class
+                        ),
+                        resultSet.getObject(
+                                "attendance_finalized_by",
+                                UUID.class
+                        )
+                ),
                 sessionId,
                 organizationId
         ).stream().findFirst().orElseThrow(
@@ -464,14 +515,14 @@ public class AttendanceService {
         if ("CANCELLED".equals(session.status())) {
             throw new BusinessRuleException(
                     "Attendance cannot be recorded for "
-                            + "a cancelled session."
+                    + "a cancelled session."
             );
         }
 
         if ("POSTPONED".equals(session.status())) {
             throw new BusinessRuleException(
                     "Attendance cannot be recorded for "
-                            + "a postponed session."
+                    + "a postponed session."
             );
         }
     }
@@ -528,11 +579,11 @@ public class AttendanceService {
                   AND membership_id = ?
                   AND employment_status = 'ACTIVE'
                 """,
-                (resultSet, rowNumber) ->
-                        resultSet.getObject(
-                                "id",
-                                UUID.class
-                        ),
+                (resultSet, rowNumber)
+                -> resultSet.getObject(
+                        "id",
+                        UUID.class
+                ),
                 actor.organizationId(),
                 actor.membershipId()
         ).stream().findFirst().orElseThrow(
@@ -571,7 +622,7 @@ public class AttendanceService {
             if (!studentIds.add(record.studentId())) {
                 throw new BusinessRuleException(
                         "A student cannot appear more than "
-                                + "once in an attendance request."
+                        + "once in an attendance request."
                 );
             }
         }
@@ -583,10 +634,10 @@ public class AttendanceService {
         if (record.departureTime() != null
                 && record.arrivalTime() != null
                 && record.departureTime()
-                .isBefore(record.arrivalTime())) {
+                        .isBefore(record.arrivalTime())) {
             throw new BusinessRuleException(
                     "Departure time cannot be before "
-                            + "arrival time."
+                    + "arrival time."
             );
         }
 
@@ -595,27 +646,21 @@ public class AttendanceService {
                 && record.arrivalTime() == null) {
             throw new BusinessRuleException(
                     "Arrival time is required when "
-                            + "attendance status is LATE."
+                    + "attendance status is LATE."
             );
         }
 
-        if (
-                (
-                        record.status()
-                                == AttendanceStatus.ABSENT
-                        || record.status()
-                                == AttendanceStatus.EXCUSED
-                        || record.status()
-                                == AttendanceStatus.NOT_RECORDED
-                )
-                && (
-                        record.arrivalTime() != null
-                        || record.departureTime() != null
-                )
-        ) {
+        if ((record.status()
+                == AttendanceStatus.ABSENT
+                || record.status()
+                == AttendanceStatus.EXCUSED
+                || record.status()
+                == AttendanceStatus.NOT_RECORDED)
+                && (record.arrivalTime() != null
+                || record.departureTime() != null)) {
             throw new BusinessRuleException(
                     "Absent, excused, or unrecorded students "
-                            + "cannot have arrival or departure times."
+                    + "cannot have arrival or departure times."
             );
         }
     }
@@ -625,9 +670,9 @@ public class AttendanceService {
             List<AttendanceRecordResponse> records
     ) {
         int recordedCount = (int) records.stream()
-                .filter(record ->
-                        record.status()
-                                != AttendanceStatus.NOT_RECORDED
+                .filter(record
+                        -> record.status()
+                != AttendanceStatus.NOT_RECORDED
                 )
                 .count();
 
@@ -656,6 +701,12 @@ public class AttendanceService {
                 AttendanceStatus.EXCUSED
         );
 
+        AttendanceCorrectionService.OpenCorrectionSummary openCorrection
+                = correctionService.findOpenCorrection(
+                        session.organizationId(),
+                        session.id()
+                );
+
         return new SessionAttendanceResponse(
                 session.id(),
                 session.groupId(),
@@ -668,6 +719,13 @@ public class AttendanceService {
                 session.attendanceFinalizedAt() != null,
                 session.attendanceFinalizedAt(),
                 session.attendanceFinalizedBy(),
+                openCorrection != null,
+                openCorrection == null
+                        ? null
+                        : openCorrection.id(),
+                openCorrection == null
+                        ? null
+                        : openCorrection.reason(),
                 records.size(),
                 recordedCount,
                 notRecordedCount,
@@ -684,8 +742,8 @@ public class AttendanceService {
             AttendanceStatus status
     ) {
         return (int) records.stream()
-                .filter(record ->
-                        record.status() == status
+                .filter(record
+                        -> record.status() == status
                 )
                 .count();
     }
@@ -744,6 +802,7 @@ public class AttendanceService {
     }
 
     private record SessionRecord(
+            UUID organizationId,
             UUID id,
             UUID groupId,
             String groupCode,
@@ -754,7 +813,8 @@ public class AttendanceService {
             String status,
             OffsetDateTime attendanceFinalizedAt,
             UUID attendanceFinalizedBy
-    ) {
+            ) {
+
         LocalDate sessionDate() {
             return scheduledStart.toLocalDate();
         }

@@ -16,6 +16,9 @@ public record SessionAttendanceResponse(
         boolean finalized,
         OffsetDateTime finalizedAt,
         UUID finalizedBy,
+        boolean correctionOpen,
+        UUID activeCorrectionId,
+        String activeCorrectionReason,
         int totalStudentCount,
         int recordedCount,
         int notRecordedCount,
@@ -24,7 +27,8 @@ public record SessionAttendanceResponse(
         int lateCount,
         int excusedCount,
         List<AttendanceRecordResponse> records
-) {
+        ) {
+
     public SessionAttendanceResponse {
         records = List.copyOf(records);
     }
