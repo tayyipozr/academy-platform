@@ -5,10 +5,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-import com.academy.platform.authentication.AuthenticatedUser;
-
-import jakarta.validation.Valid;
-
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,16 +18,23 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.academy.platform.authentication.AuthenticatedUser;
+
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/v1/evaluations")
 public class StudentEvaluationController {
 
     private final StudentEvaluationService evaluationService;
+    private final EvaluationPublicationService publicationService;
 
     public StudentEvaluationController(
-            StudentEvaluationService evaluationService
+            StudentEvaluationService evaluationService,
+            EvaluationPublicationService publicationService
     ) {
         this.evaluationService = evaluationService;
+        this.publicationService = publicationService;
     }
 
     @GetMapping
@@ -39,34 +42,21 @@ public class StudentEvaluationController {
             "hasAuthority('evaluations.read')"
     )
     public List<StudentEvaluationSummaryResponse>
-    findEvaluations(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @RequestParam(required = false)
-            UUID studentId,
-
-            @RequestParam(required = false)
-            UUID groupId,
-
-            @RequestParam(required = false)
-            UUID sessionId,
-
-            @RequestParam(required = false)
-            StudentEvaluationStatus status,
-
-            @RequestParam(required = false)
-            @DateTimeFormat(
-                    iso = DateTimeFormat.ISO.DATE
-            )
-            LocalDate dateFrom,
-
-            @RequestParam(required = false)
-            @DateTimeFormat(
-                    iso = DateTimeFormat.ISO.DATE
-            )
-            LocalDate dateTo
-    ) {
+            findEvaluations(
+                    @AuthenticationPrincipal AuthenticatedUser currentUser,
+                    @RequestParam(required = false) UUID studentId,
+                    @RequestParam(required = false) UUID groupId,
+                    @RequestParam(required = false) UUID sessionId,
+                    @RequestParam(required = false) StudentEvaluationStatus status,
+                    @RequestParam(required = false)
+                    @DateTimeFormat(
+                            iso = DateTimeFormat.ISO.DATE
+                    ) LocalDate dateFrom,
+                    @RequestParam(required = false)
+                    @DateTimeFormat(
+                            iso = DateTimeFormat.ISO.DATE
+                    ) LocalDate dateTo
+            ) {
         return evaluationService.findEvaluations(
                 currentUser,
                 studentId,
@@ -83,11 +73,8 @@ public class StudentEvaluationController {
             "hasAuthority('evaluations.read')"
     )
     public StudentEvaluationResponse findEvaluation(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID evaluationId
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID evaluationId
     ) {
         return evaluationService.findEvaluation(
                 currentUser,
@@ -100,16 +87,13 @@ public class StudentEvaluationController {
             "hasAuthority('evaluations.manage')"
     )
     public ResponseEntity<StudentEvaluationResponse>
-    createEvaluation(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @Valid
-            @RequestBody
-            SaveStudentEvaluationRequest request
-    ) {
-        StudentEvaluationResponse evaluation =
-                evaluationService.createEvaluation(
+            createEvaluation(
+                    @AuthenticationPrincipal AuthenticatedUser currentUser,
+                    @Valid
+                    @RequestBody SaveStudentEvaluationRequest request
+            ) {
+        StudentEvaluationResponse evaluation
+                = evaluationService.createEvaluation(
                         currentUser,
                         request
                 );
@@ -118,7 +102,7 @@ public class StudentEvaluationController {
                 .created(
                         URI.create(
                                 "/api/v1/evaluations/"
-                                        + evaluation.id()
+                                + evaluation.id()
                         )
                 )
                 .body(evaluation);
@@ -129,15 +113,10 @@ public class StudentEvaluationController {
             "hasAuthority('evaluations.manage')"
     )
     public StudentEvaluationResponse updateEvaluation(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID evaluationId,
-
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID evaluationId,
             @Valid
-            @RequestBody
-            SaveStudentEvaluationRequest request
+            @RequestBody SaveStudentEvaluationRequest request
     ) {
         return evaluationService.updateEvaluation(
                 currentUser,
@@ -151,13 +130,24 @@ public class StudentEvaluationController {
             "hasAuthority('evaluations.manage')"
     )
     public StudentEvaluationResponse submitEvaluation(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID evaluationId
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID evaluationId
     ) {
         return evaluationService.submitEvaluation(
+                currentUser,
+                evaluationId
+        );
+    }
+
+    @PostMapping("/{evaluationId}/publish")
+    @PreAuthorize(
+            "hasAuthority('evaluations.publish')"
+    )
+    public StudentEvaluationResponse publishEvaluation(
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID evaluationId
+    ) {
+        return publicationService.publishEvaluation(
                 currentUser,
                 evaluationId
         );
