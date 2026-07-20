@@ -12,14 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class StandardRoleProvisioningService {
 
-    private static final String ORGANIZATION_ADMIN =
-            "ORGANIZATION_ADMIN";
+    private static final String ORGANIZATION_ADMIN
+            = "ORGANIZATION_ADMIN";
 
-    private static final String INSTRUCTOR =
-            "INSTRUCTOR";
+    private static final String INSTRUCTOR
+            = "INSTRUCTOR";
 
-    private static final String GUARDIAN =
-            "GUARDIAN";
+    private static final String GUARDIAN
+            = "GUARDIAN";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -64,7 +64,10 @@ public class StandardRoleProvisioningService {
                         "attendance.record",
                         "evaluations.read",
                         "evaluations.manage",
-                        "reports.read"
+                        "reports.read",
+                        "branches.read",
+                        "programs.read",
+                        "terms.read"
                 )
         );
 
@@ -90,14 +93,14 @@ public class StandardRoleProvisioningService {
                 WHERE organization_id = ?
                   AND name = ?
                 """,
-                (resultSet, rowNumber) ->
-                        resultSet.getObject("id", UUID.class),
+                (resultSet, rowNumber)
+                -> resultSet.getObject("id", UUID.class),
                 organizationId,
                 name
         ).stream().findFirst().orElseGet(() -> {
             UUID roleId = UUID.randomUUID();
-            OffsetDateTime now =
-                    OffsetDateTime.now(ZoneOffset.UTC);
+            OffsetDateTime now
+                    = OffsetDateTime.now(ZoneOffset.UTC);
 
             jdbcTemplate.update(
                     """
@@ -168,7 +171,7 @@ public class StandardRoleProvisioningService {
             if (insertedRows == 0) {
                 throw new IllegalStateException(
                         "Permission does not exist: "
-                                + permissionCode
+                        + permissionCode
                 );
             }
         }
