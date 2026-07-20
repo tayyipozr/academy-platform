@@ -2,10 +2,14 @@ import { apiRequest } from "@/lib/api/api-client";
 
 import type {
   EvaluationCriterion,
+  EvaluationFilters,
   EvaluationTemplate,
   EvaluationTemplateStatus,
   SaveEvaluationCriterionRequest,
   SaveEvaluationTemplateRequest,
+  SaveStudentEvaluationRequest,
+  StudentEvaluation,
+  StudentEvaluationSummary,
 } from "./types";
 
 export function getEvaluationTemplates(
@@ -107,6 +111,95 @@ export function updateEvaluationCriterion(
     {
       method: "PUT",
       body: JSON.stringify(request),
+    },
+  );
+}
+
+export function getStudentEvaluations(
+  filters: EvaluationFilters = {},
+): Promise<StudentEvaluationSummary[]> {
+  const query = new URLSearchParams();
+
+  if (filters.studentId) {
+    query.set("studentId", filters.studentId);
+  }
+
+  if (filters.groupId) {
+    query.set("groupId", filters.groupId);
+  }
+
+  if (filters.sessionId) {
+    query.set("sessionId", filters.sessionId);
+  }
+
+  if (filters.status) {
+    query.set("status", filters.status);
+  }
+
+  if (filters.dateFrom) {
+    query.set("dateFrom", filters.dateFrom);
+  }
+
+  if (filters.dateTo) {
+    query.set("dateTo", filters.dateTo);
+  }
+
+  return apiRequest<StudentEvaluationSummary[]>(
+    `/evaluations?${query.toString()}`,
+  );
+}
+
+export function getStudentEvaluation(
+  evaluationId: string,
+): Promise<StudentEvaluation> {
+  return apiRequest<StudentEvaluation>(
+    `/evaluations/${evaluationId}`,
+  );
+}
+
+export function createStudentEvaluation(
+  request: SaveStudentEvaluationRequest,
+): Promise<StudentEvaluation> {
+  return apiRequest<StudentEvaluation>(
+    "/evaluations",
+    {
+      method: "POST",
+      body: JSON.stringify(request),
+    },
+  );
+}
+
+export function updateStudentEvaluation(
+  evaluationId: string,
+  request: SaveStudentEvaluationRequest,
+): Promise<StudentEvaluation> {
+  return apiRequest<StudentEvaluation>(
+    `/evaluations/${evaluationId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(request),
+    },
+  );
+}
+
+export function submitStudentEvaluation(
+  evaluationId: string,
+): Promise<StudentEvaluation> {
+  return apiRequest<StudentEvaluation>(
+    `/evaluations/${evaluationId}/submit`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export function publishStudentEvaluation(
+  evaluationId: string,
+): Promise<StudentEvaluation> {
+  return apiRequest<StudentEvaluation>(
+    `/evaluations/${evaluationId}/publish`,
+    {
+      method: "POST",
     },
   );
 }

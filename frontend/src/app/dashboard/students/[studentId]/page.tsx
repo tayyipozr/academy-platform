@@ -371,6 +371,18 @@ export default function StudentDetailPage() {
                             {student.studentNumber}
                         </p>
                     </div>
+
+                    {hasPermission(
+                        currentUser,
+                        "evaluations.read",
+                    ) && (
+                            <Link
+                                href={`/dashboard/evaluations?studentId=${student.id}`}
+                                className="rounded-lg border border-blue-300 px-4 py-2 font-medium text-blue-700"
+                            >
+                                Evaluations
+                            </Link>
+                        )}
                 </header>
 
                 {pageError && (

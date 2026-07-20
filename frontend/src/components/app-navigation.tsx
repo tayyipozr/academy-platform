@@ -50,6 +50,11 @@ const navigationItems: NavigationItem[] = [
     permission: "evaluations.read",
   },
   {
+    href: "/dashboard/evaluations",
+    label: "Evaluations",
+    permission: "evaluations.read",
+  },
+  {
     href: "/dashboard/groups",
     label: "Groups",
     permission: "groups.read",
