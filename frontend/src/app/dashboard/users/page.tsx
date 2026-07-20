@@ -41,15 +41,15 @@ import {
 
 type DialogState =
   | {
-      mode: "create";
-    }
+    mode: "create";
+  }
   | {
-      mode: "invite";
-    }
+    mode: "invite";
+  }
   | {
-      mode: "edit";
-      user: OrganizationUser;
-    }
+    mode: "edit";
+    user: OrganizationUser;
+  }
   | null;
 
 const PAGE_SIZE = 20;
@@ -133,6 +133,14 @@ export default function UsersPage() {
       currentUserQuery.isSuccess && canReadUsers,
   });
 
+  const totalPages =
+    usersQuery.data?.page.totalPages ?? 0;
+
+  const displayedPage =
+    totalPages === 0
+      ? 0
+      : Math.min(page, totalPages - 1);
+
   useEffect(() => {
     if (
       currentUserQuery.error instanceof ApiError &&
@@ -141,19 +149,6 @@ export default function UsersPage() {
       router.replace("/login");
     }
   }, [currentUserQuery.error, router]);
-
-  useEffect(() => {
-    const totalPages =
-      usersQuery.data?.page.totalPages;
-
-    if (
-      totalPages !== undefined &&
-      totalPages > 0 &&
-      page >= totalPages
-    ) {
-      setPage(totalPages - 1);
-    }
-  }, [page, usersQuery.data?.page.totalPages]);
 
   async function refreshUsers() {
     await queryClient.invalidateQueries({
@@ -530,11 +525,8 @@ export default function UsersPage() {
               </button>
 
               <span className="text-sm text-slate-600">
-                Page {page + 1} of{" "}
-                {Math.max(
-                  usersQuery.data.page.totalPages,
-                  1,
-                )}
+                Page {displayedPage + 1} of{" "}
+                {Math.max(totalPages, 1)}
               </span>
 
               <button

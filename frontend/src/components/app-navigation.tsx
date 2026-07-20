@@ -26,6 +26,15 @@ const navigationItems: NavigationItem[] = [
     href: "/dashboard/students",
     label: "Students",
     permission: "students.read",
+  }, {
+    href: "/dashboard/programs",
+    label: "Programs",
+    permission: "programs.read",
+  },
+  {
+    href: "/dashboard/terms",
+    label: "Terms",
+    permission: "terms.read",
   },
   {
     href: "/dashboard/groups",
