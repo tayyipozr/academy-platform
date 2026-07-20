@@ -46,6 +46,11 @@ const navigationItems: NavigationItem[] = [
     permission: "groups.read",
   },
   {
+    href: "/dashboard/sessions",
+    label: "Schedule",
+    permission: "sessions.read",
+  },
+  {
     href: "/dashboard/reports",
     label: "Reports",
     permission: "reports.read",

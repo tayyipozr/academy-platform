@@ -7,16 +7,16 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.academy.platform.auditing.AuditService;
 import com.academy.platform.authentication.AuthenticatedUser;
 import com.academy.platform.common.BusinessRuleException;
 import com.academy.platform.common.ConflictException;
 import com.academy.platform.common.ResourceNotFoundException;
-
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SessionService {
@@ -47,8 +47,14 @@ public class SessionService {
                 request.groupId()
         );
 
-        CurriculumReference curriculum =
-                resolveCurriculum(
+        validateActorCanAccessGroup(
+                actor,
+                request.groupId(),
+                request.scheduledStart().toLocalDate()
+        );
+
+        CurriculumReference curriculum
+                = resolveCurriculum(
                         actor.organizationId(),
                         request.groupId(),
                         request.curriculumUnitId()
@@ -62,8 +68,8 @@ public class SessionService {
 
         UUID sessionId = UUID.randomUUID();
 
-        OffsetDateTime now =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
         try {
             jdbcTemplate.update(
@@ -113,7 +119,7 @@ public class SessionService {
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException(
                     "The group already has a session "
-                            + "at the selected time."
+                    + "at the selected time."
             );
         }
 
@@ -140,8 +146,8 @@ public class SessionService {
     ) {
         UUID sessionId = UUID.randomUUID();
 
-        OffsetDateTime now =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
         try {
             int inserted = jdbcTemplate.update(
@@ -204,6 +210,14 @@ public class SessionService {
         );
     }
 
+    private boolean isOrganizationAdministrator(
+            AuthenticatedUser actor
+    ) {
+        return actor.roles().contains(
+                "ORGANIZATION_ADMIN"
+        );
+    }
+
     @Transactional(readOnly = true)
     public List<SessionResponse> findSessions(
             AuthenticatedUser actor,
@@ -213,10 +227,11 @@ public class SessionService {
             OffsetDateTime dateFrom,
             OffsetDateTime dateTo
     ) {
-        boolean canManage =
-                actor.hasPermission("sessions.manage");
 
-        UUID currentStaffId = canManage
+        boolean organizationAdministrator
+                = isOrganizationAdministrator(actor);
+
+        UUID currentStaffId = organizationAdministrator
                 ? null
                 : findCurrentStaffId(actor);
 
@@ -333,8 +348,8 @@ public class SessionService {
 
                 ORDER BY ls.scheduled_start
                 """,
-                (resultSet, rowNumber) ->
-                        mapSession(resultSet),
+                (resultSet, rowNumber)
+                -> mapSession(resultSet),
                 actor.organizationId(),
                 groupId,
                 groupId,
@@ -346,7 +361,7 @@ public class SessionService {
                 dateFrom,
                 dateTo,
                 dateTo,
-                canManage,
+                organizationAdministrator,
                 currentStaffId,
                 currentStaffId
         );
@@ -421,8 +436,8 @@ public class SessionService {
                 WHERE ls.id = ?
                   AND ls.organization_id = ?
                 """,
-                (resultSet, rowNumber) ->
-                        mapSession(resultSet),
+                (resultSet, rowNumber)
+                -> mapSession(resultSet),
                 sessionId,
                 organizationId
         ).stream().findFirst().orElseThrow(
@@ -443,13 +458,27 @@ public class SessionService {
                 sessionId
         );
 
+        validateActorCanAccessGroup(
+                actor,
+                existing.groupId(),
+                existing.scheduledStart()
+                        .toLocalDate()
+        );
+
+        validateActorCanAccessGroup(
+                actor,
+                existing.groupId(),
+                request.scheduledStart()
+                        .toLocalDate()
+        );
+
         if (existing.status()
                 == SessionStatus.COMPLETED
                 || existing.status()
                 == SessionStatus.CANCELLED) {
             throw new BusinessRuleException(
                     "Completed or cancelled sessions "
-                            + "cannot be rescheduled."
+                    + "cannot be rescheduled."
             );
         }
 
@@ -482,7 +511,7 @@ public class SessionService {
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException(
                     "The group already has a session "
-                            + "at the selected time."
+                    + "at the selected time."
             );
         }
 
@@ -511,32 +540,37 @@ public class SessionService {
                 sessionId
         );
 
+        validateActorCanAccessGroup(
+                actor,
+                existing.groupId(),
+                existing.scheduledStart()
+                        .toLocalDate()
+        );
+
         validateStatusTransition(
                 existing.status(),
                 request.status()
         );
 
-        OffsetDateTime now =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
-        OffsetDateTime completedAt =
-                request.status()
-                        == SessionStatus.COMPLETED
+        OffsetDateTime completedAt
+                = request.status()
+                == SessionStatus.COMPLETED
                         ? now
                         : null;
 
-        OffsetDateTime cancelledAt =
-                request.status()
-                        == SessionStatus.CANCELLED
+        OffsetDateTime cancelledAt
+                = request.status()
+                == SessionStatus.CANCELLED
                         ? now
                         : null;
 
         if (request.status()
                 == SessionStatus.CANCELLED
-                && (
-                    request.cancellationReason() == null
-                    || request.cancellationReason().isBlank()
-                )) {
+                && (request.cancellationReason() == null
+                || request.cancellationReason().isBlank())) {
             throw new BusinessRuleException(
                     "A cancellation reason is required."
             );
@@ -576,8 +610,8 @@ public class SessionService {
                 "LESSON_SESSION",
                 sessionId,
                 "Session status changed from "
-                        + existing.status()
-                        + " to " + request.status()
+                + existing.status()
+                + " to " + request.status()
         );
 
         return findSession(
@@ -606,7 +640,7 @@ public class SessionService {
         if (count == null || count == 0) {
             throw new BusinessRuleException(
                     "The selected group is invalid "
-                            + "or unavailable."
+                    + "or unavailable."
             );
         }
     }
@@ -636,24 +670,24 @@ public class SessionService {
                   AND gca.status = 'ACTIVE'
                   AND cu.id = ?
                 """,
-                (resultSet, rowNumber) ->
-                        new CurriculumReference(
-                                resultSet.getObject(
-                                        "assignment_id",
-                                        UUID.class
-                                ),
-                                resultSet.getObject(
-                                        "curriculum_id",
-                                        UUID.class
-                                )
+                (resultSet, rowNumber)
+                -> new CurriculumReference(
+                        resultSet.getObject(
+                                "assignment_id",
+                                UUID.class
                         ),
+                        resultSet.getObject(
+                                "curriculum_id",
+                                UUID.class
+                        )
+                ),
                 organizationId,
                 groupId,
                 unitId
         ).stream().findFirst().orElseThrow(
                 () -> new BusinessRuleException(
                         "The selected curriculum unit is "
-                                + "not available for this group."
+                        + "not available for this group."
                 )
         );
     }
@@ -685,7 +719,7 @@ public class SessionService {
         if (count == null || count == 0) {
             throw new BusinessRuleException(
                     "The selected instructor is not "
-                            + "assigned to the group."
+                    + "assigned to the group."
             );
         }
     }
@@ -701,17 +735,17 @@ public class SessionService {
                   AND membership_id = ?
                   AND employment_status = 'ACTIVE'
                 """,
-                (resultSet, rowNumber) ->
-                        resultSet.getObject(
-                                "id",
-                                UUID.class
-                        ),
+                (resultSet, rowNumber)
+                -> resultSet.getObject(
+                        "id",
+                        UUID.class
+                ),
                 actor.organizationId(),
                 actor.membershipId()
         ).stream().findFirst().orElseThrow(
                 () -> new BusinessRuleException(
                         "The current account has no active "
-                                + "staff profile."
+                        + "staff profile."
                 )
         );
     }
@@ -737,25 +771,26 @@ public class SessionService {
 
         boolean allowed = switch (current) {
             case SCHEDULED ->
-                    target == SessionStatus.IN_PROGRESS
-                    || target == SessionStatus.POSTPONED
-                    || target == SessionStatus.CANCELLED;
+                target == SessionStatus.IN_PROGRESS
+                || target == SessionStatus.POSTPONED
+                || target == SessionStatus.CANCELLED;
 
             case POSTPONED ->
-                    target == SessionStatus.SCHEDULED
-                    || target == SessionStatus.CANCELLED;
+                target == SessionStatus.SCHEDULED
+                || target == SessionStatus.CANCELLED;
 
             case IN_PROGRESS ->
-                    target == SessionStatus.COMPLETED
-                    || target == SessionStatus.CANCELLED;
+                target == SessionStatus.COMPLETED
+                || target == SessionStatus.CANCELLED;
 
-            case COMPLETED, CANCELLED -> false;
+            case COMPLETED, CANCELLED ->
+                false;
         };
 
         if (!allowed) {
             throw new BusinessRuleException(
                     "Session status cannot change from "
-                            + current + " to " + target + "."
+                    + current + " to " + target + "."
             );
         }
     }
@@ -848,9 +883,72 @@ public class SessionService {
     private record CurriculumReference(
             UUID assignmentId,
             UUID curriculumId
-    ) {
+            ) {
+
         static CurriculumReference empty() {
             return new CurriculumReference(null, null);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public SessionResponse findAccessibleSession(
+            AuthenticatedUser actor,
+            UUID sessionId
+    ) {
+        SessionResponse session = findSession(
+                actor.organizationId(),
+                sessionId
+        );
+
+        validateActorCanAccessGroup(
+                actor,
+                session.groupId(),
+                session.scheduledStart()
+                        .toLocalDate()
+        );
+
+        return session;
+    }
+
+    private void validateActorCanAccessGroup(
+            AuthenticatedUser actor,
+            UUID groupId,
+            java.time.LocalDate operationDate
+    ) {
+        if (isOrganizationAdministrator(actor)) {
+            return;
+        }
+
+        UUID staffId = findCurrentStaffId(actor);
+
+        Integer assignmentCount
+                = jdbcTemplate.queryForObject(
+                        """
+                    SELECT COUNT(*)
+                    FROM group_staff_assignments
+                    WHERE organization_id = ?
+                      AND group_id = ?
+                      AND staff_id = ?
+                      AND status = 'ACTIVE'
+                      AND start_date <= ?
+                      AND (
+                          end_date IS NULL
+                          OR end_date >= ?
+                      )
+                    """,
+                        Integer.class,
+                        actor.organizationId(),
+                        groupId,
+                        staffId,
+                        operationDate,
+                        operationDate
+                );
+
+        if (assignmentCount == null
+                || assignmentCount == 0) {
+            throw new ResourceNotFoundException(
+                    "Session was not found."
+            );
         }
     }
 }

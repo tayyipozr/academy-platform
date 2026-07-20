@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import { GroupSessionsPanel } from "@/features/scheduling/group-sessions-panel";
 
 import {
     useMutation,
@@ -118,6 +119,11 @@ export default function GroupSchedulePage() {
     );
 
     const canManage = hasPermission(
+        currentUser,
+        "sessions.manage",
+    );
+
+    const canManageSessions = hasPermission(
         currentUser,
         "sessions.manage",
     );
@@ -684,6 +690,15 @@ export default function GroupSchedulePage() {
                             </table>
                         )}
                 </section>
+
+                <GroupSessionsPanel
+                    group={group}
+                    units={units}
+                    staffAssignments={staffAssignments}
+                    canRead={canRead}
+                    canManage={canManageSessions}
+                />
+
             </main>
 
             {dialog?.type === "rule" && (

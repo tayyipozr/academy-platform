@@ -108,3 +108,34 @@ export type SessionGenerationResponse = {
   skippedSessionCount: number;
   generatedSessions: LessonSession[];
 };
+
+export type CreateSessionRequest = {
+  groupId: string;
+  curriculumUnitId: string | null;
+  leadStaffId: string | null;
+  title: string;
+  description: string | null;
+  scheduledStart: string;
+  scheduledEnd: string;
+  location: string | null;
+};
+
+export type RescheduleSessionRequest = {
+  scheduledStart: string;
+  scheduledEnd: string;
+  location: string | null;
+};
+
+export type UpdateSessionStatusRequest = {
+  status: SessionStatus;
+  completionNotes: string | null;
+  cancellationReason: string | null;
+};
+
+export type SessionFilters = {
+  groupId?: string;
+  staffId?: string;
+  status?: SessionStatus | "";
+  dateFrom?: string;
+  dateTo?: string;
+};
