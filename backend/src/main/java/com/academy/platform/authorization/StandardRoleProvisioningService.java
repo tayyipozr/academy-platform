@@ -70,7 +70,8 @@ public class StandardRoleProvisioningService {
                         "terms.read",
                         "enrollments.read",
                         "group_staff.read",
-                        "group_curricula.read"
+                        "group_curricula.read",
+                        "attendance.finalize"
                 )
         );
 
