@@ -74,7 +74,8 @@ public class StandardRoleProvisioningService {
                         "attendance.finalize",
                         "attendance.correct",
                         "media.read",
-                        "media.upload"
+                        "media.upload",
+                        "media.link"
                 )
         );
 
