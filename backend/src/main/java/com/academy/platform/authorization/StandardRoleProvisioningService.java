@@ -69,7 +69,8 @@ public class StandardRoleProvisioningService {
                         "programs.read",
                         "terms.read",
                         "enrollments.read",
-                        "group_staff.read"
+                        "group_staff.read",
+                        "group_curricula.read"
                 )
         );
 
