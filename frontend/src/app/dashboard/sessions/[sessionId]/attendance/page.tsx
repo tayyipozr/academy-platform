@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
     useEffect,
-    useMemo,
     useState,
 } from "react";
 import {
@@ -67,10 +66,7 @@ export default function SessionAttendancePage() {
     const queryClient = useQueryClient();
 
     const [editableRecords, setEditableRecords] =
-        useState<EditableAttendanceRecord[]>([]);
-
-    const [editorInitialized, setEditorInitialized] =
-        useState(false);
+        useState<EditableAttendanceRecord[] | null>(null);
 
     const [pageError, setPageError] =
         useState<string | null>(null);
@@ -141,33 +137,17 @@ export default function SessionAttendancePage() {
         }
     }, [currentUserQuery.error, router]);
 
-    useEffect(() => {
-        if (
-            attendanceQuery.data &&
-            !editorInitialized
-        ) {
-            setEditableRecords(
-                attendanceQuery.data.records.map(
-                    toEditableAttendance,
-                ),
-            );
-
-            setEditorInitialized(true);
-        }
-    }, [
-        attendanceQuery.data,
-        editorInitialized,
-    ]);
-
     const initializeMutation = useMutation({
         mutationFn: () =>
             initializeAttendance(sessionId),
     });
 
     const saveMutation = useMutation({
-        mutationFn: () =>
+        mutationFn: (
+            records: EditableAttendanceRecord[],
+        ) =>
             saveAttendance(sessionId, {
-                records: editableRecords.map(
+                records: records.map(
                     toSaveAttendanceRecord,
                 ),
             }),
@@ -188,6 +168,11 @@ export default function SessionAttendancePage() {
 
     const attendance = attendanceQuery.data;
 
+    const rosterRecords =
+        editableRecords ??
+        attendance?.records.map(toEditableAttendance) ??
+        [];
+
     const editable =
         Boolean(attendance) &&
         !attendance?.finalized &&
@@ -202,25 +187,19 @@ export default function SessionAttendancePage() {
     const hasRoster =
         (attendance?.records.length ?? 0) > 0;
 
-    const allRecorded = useMemo(
-        () =>
-            editableRecords.length > 0 &&
-            editableRecords.every(
-                (record) =>
-                    record.status !== "NOT_RECORDED",
-            ),
-        [editableRecords],
-    );
+    const allRecorded =
+        rosterRecords.length > 0 &&
+        rosterRecords.every(
+            (record) =>
+                record.status !== "NOT_RECORDED",
+        );
 
-    const hasInvalidLateRecord = useMemo(
-        () =>
-            editableRecords.some(
-                (record) =>
-                    record.status === "LATE" &&
-                    !record.arrivalTime,
-            ),
-        [editableRecords],
-    );
+    const hasInvalidLateRecord =
+        rosterRecords.some(
+            (record) =>
+                record.status === "LATE" &&
+                !record.arrivalTime,
+        );
 
     async function refreshAttendance() {
         await Promise.all([
@@ -253,7 +232,7 @@ export default function SessionAttendancePage() {
                 ),
             );
 
-            setEditorInitialized(true);
+            setEditableRecords(null);
             await refreshAttendance();
         } catch (error) {
             setPageError(
@@ -278,7 +257,9 @@ export default function SessionAttendancePage() {
 
         try {
             const result =
-                await saveMutation.mutateAsync();
+                await saveMutation.mutateAsync(
+                    rosterRecords,
+                );
 
             setEditableRecords(
                 result.records.map(
@@ -312,7 +293,7 @@ export default function SessionAttendancePage() {
 
         try {
             await finalizeMutation.mutateAsync();
-            setEditorInitialized(false);
+            setEditableRecords(null);
             await refreshAttendance();
         } catch (error) {
             setPageError(
@@ -335,7 +316,7 @@ export default function SessionAttendancePage() {
             );
 
             setCorrectionDialogOpen(false);
-            setEditorInitialized(false);
+            setEditableRecords(null);
             await refreshAttendance();
         } catch (error) {
             setCorrectionError(
@@ -351,16 +332,23 @@ export default function SessionAttendancePage() {
         studentId: string,
         patch: Partial<EditableAttendanceRecord>,
     ) {
-        setEditableRecords((records) =>
-            records.map((record) =>
+        setEditableRecords((current) => {
+            const records =
+                current ??
+                attendance?.records.map(
+                    toEditableAttendance,
+                ) ??
+                [];
+
+            return records.map((record) =>
                 record.studentId === studentId
                     ? {
                         ...record,
                         ...patch,
                     }
                     : record,
-            ),
-        );
+            );
+        });
     }
 
     function changeStatus(
@@ -385,8 +373,15 @@ export default function SessionAttendancePage() {
     }
 
     function markAllPresent() {
-        setEditableRecords((records) =>
-            records.map((record) => ({
+        setEditableRecords((current) => {
+            const records =
+                current ??
+                attendance?.records.map(
+                    toEditableAttendance,
+                ) ??
+                [];
+
+            return records.map((record) => ({
                 ...record,
                 status: "PRESENT",
                 arrivalTime:
@@ -399,8 +394,8 @@ export default function SessionAttendancePage() {
                     sessionEndTime(
                         attendance?.scheduledEnd,
                     ),
-            })),
-        );
+            }));
+        });
     }
 
     if (
@@ -656,7 +651,7 @@ export default function SessionAttendancePage() {
                                 </thead>
 
                                 <tbody className="divide-y">
-                                    {editableRecords.map((record) => (
+                                    {rosterRecords.map((record) => (
                                         <tr key={record.id}>
                                             <td className="p-4">
                                                 <Link

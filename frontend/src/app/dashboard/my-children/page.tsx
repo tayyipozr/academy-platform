@@ -22,6 +22,10 @@ import {
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
 
+import {
+    StudentDevelopmentPanel,
+} from "@/features/evaluations/student-development-panel";
+
 export default function MyChildrenPage() {
     const [selectedStudentId, setSelectedStudentId] =
         useState<string | null>(null);
@@ -36,6 +40,11 @@ export default function MyChildrenPage() {
     const canReadLinkedStudents = hasPermission(
         currentUser,
         "guardian.linked-students.read",
+    );
+
+    const canReadReports = hasPermission(
+        currentUser,
+        "guardian.reports.read",
     );
 
     const linkedStudentsQuery = useQuery({
@@ -138,8 +147,8 @@ export default function MyChildrenPage() {
                                                     )
                                                 }
                                                 className={`rounded-xl border p-5 text-left ${selected
-                                                        ? "border-blue-500 bg-blue-50"
-                                                        : "border-slate-200 bg-white hover:bg-slate-50"
+                                                    ? "border-blue-500 bg-blue-50"
+                                                    : "border-slate-200 bg-white hover:bg-slate-50"
                                                     }`}
                                             >
                                                 <p className="font-semibold text-slate-900">
@@ -202,6 +211,15 @@ export default function MyChildrenPage() {
                                             selectedStudent.studentId
                                         }
                                         showOrganizationFilters={false}
+                                    />
+                                </div>
+                            )}
+
+                            {selectedStudent && canReadReports && (
+                                <div className="mt-10">
+                                    <StudentDevelopmentPanel
+                                        studentId={selectedStudent.studentId}
+                                        showGroupFilter={false}
                                     />
                                 </div>
                             )}

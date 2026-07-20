@@ -40,6 +40,10 @@ import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
 import { StudentAttendancePanel } from "@/features/attendance/student-attendance-panel";
 
+import {
+    StudentDevelopmentPanel,
+} from "@/features/evaluations/student-development-panel";
+
 export default function StudentDetailPage() {
     const parameters = useParams<{
         studentId: string;
@@ -81,6 +85,11 @@ export default function StudentDetailPage() {
     const canReadAttendance = hasPermission(
         currentUser,
         "attendance.read",
+    );
+
+    const canReadEvaluations = hasPermission(
+        currentUser,
+        "evaluations.read",
     );
 
     const studentQuery = useQuery({
@@ -493,6 +502,14 @@ export default function StudentDetailPage() {
                 {canReadAttendance && (
                     <div className="mt-8">
                         <StudentAttendancePanel
+                            studentId={student.id}
+                        />
+                    </div>
+                )}
+
+                {canReadEvaluations && (
+                    <div className="mt-8">
+                        <StudentDevelopmentPanel
                             studentId={student.id}
                         />
                     </div>

@@ -10,6 +10,10 @@ import type {
   SaveStudentEvaluationRequest,
   StudentEvaluation,
   StudentEvaluationSummary,
+  EvaluationReportFilters,
+  GroupPerformanceSummary,
+  PublishedEvaluation,
+  StudentDevelopmentSummary,
 } from "./types";
 
 export function getEvaluationTemplates(
@@ -202,4 +206,59 @@ export function publishStudentEvaluation(
       method: "POST",
     },
   );
+}
+export function getPublishedEvaluations(
+  studentId: string,
+  filters: EvaluationReportFilters = {},
+): Promise<PublishedEvaluation[]> {
+  const query = createReportQuery(filters);
+
+  return apiRequest<PublishedEvaluation[]>(
+    `/students/${studentId}/published-evaluations?${query.toString()}`,
+  );
+}
+
+export function getStudentDevelopmentSummary(
+  studentId: string,
+  filters: EvaluationReportFilters = {},
+): Promise<StudentDevelopmentSummary> {
+  const query = createReportQuery(filters);
+
+  return apiRequest<StudentDevelopmentSummary>(
+    `/students/${studentId}/development-summary?${query.toString()}`,
+  );
+}
+
+export function getGroupPerformanceSummary(
+  groupId: string,
+  filters: Pick<
+    EvaluationReportFilters,
+    "dateFrom" | "dateTo"
+  > = {},
+): Promise<GroupPerformanceSummary> {
+  const query = createReportQuery(filters);
+
+  return apiRequest<GroupPerformanceSummary>(
+    `/groups/${groupId}/performance-summary?${query.toString()}`,
+  );
+}
+
+function createReportQuery(
+  filters: EvaluationReportFilters,
+): URLSearchParams {
+  const query = new URLSearchParams();
+
+  if (filters.groupId) {
+    query.set("groupId", filters.groupId);
+  }
+
+  if (filters.dateFrom) {
+    query.set("dateFrom", filters.dateFrom);
+  }
+
+  if (filters.dateTo) {
+    query.set("dateTo", filters.dateTo);
+  }
+
+  return query;
 }

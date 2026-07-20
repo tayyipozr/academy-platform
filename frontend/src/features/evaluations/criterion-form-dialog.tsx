@@ -3,7 +3,11 @@
 import { useEffect } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+
+import {
+  useForm,
+  useWatch,
+} from "react-hook-form";
 
 import {
   evaluationCriterionFormSchema,
@@ -37,9 +41,9 @@ export function CriterionFormDialog({
 }: CriterionFormDialogProps) {
   const {
     register,
+    control,
     handleSubmit,
     reset,
-    watch,
     formState: { errors },
   } = useForm<EvaluationCriterionFormValues>({
     resolver: zodResolver(
@@ -71,8 +75,13 @@ export function CriterionFormDialog({
     });
   }, [criterion, criterionCount, reset]);
 
+  const watchedWeightValue = useWatch({
+    control,
+    name: "weightPercentage",
+  });
+
   const watchedWeight = Number(
-    watch("weightPercentage") || 0,
+    watchedWeightValue || 0,
   );
 
   const weightWithoutCurrent =
@@ -179,13 +188,12 @@ export function CriterionFormDialog({
             />
 
             <p
-              className={`mt-2 text-sm ${
-                projectedTotal > 100
-                  ? "text-red-700"
-                  : projectedTotal === 100
-                    ? "text-green-700"
-                    : "text-slate-500"
-              }`}
+              className={`mt-2 text-sm ${projectedTotal > 100
+                ? "text-red-700"
+                : projectedTotal === 100
+                  ? "text-green-700"
+                  : "text-slate-500"
+                }`}
             >
               Projected total weight:{" "}
               {projectedTotal.toFixed(2)}%

@@ -183,3 +183,151 @@ export type EvaluationFilters = {
   dateFrom?: string;
   dateTo?: string;
 };
+
+export type PublishedCriterionScore = {
+  criterionId: string;
+  criterionCode: string;
+  criterionName: string;
+  criterionDescription: string | null;
+  weightPercentage: number;
+  score: number;
+  weightedScore: number;
+  evaluatorComment: string | null;
+};
+
+export type PublishedEvaluation = {
+  id: string;
+
+  studentId: string;
+  studentNumber: string;
+  studentFirstName: string;
+  studentLastName: string;
+
+  groupId: string;
+  groupCode: string;
+  groupName: string;
+
+  templateId: string;
+  templateName: string;
+  templateVersion: string;
+
+  evaluationDate: string;
+
+  minimumScore: number;
+  maximumScore: number;
+  passingScore: number | null;
+  overallScore: number;
+
+  normalizedScore: number;
+  passed: boolean | null;
+
+  evaluatorName: string | null;
+  evaluatorComment: string | null;
+
+  publishedAt: string;
+
+  scores: PublishedCriterionScore[];
+};
+
+export type CriterionAverage = {
+  templateId: string;
+  templateName: string;
+
+  criterionId: string;
+  criterionCode: string;
+  criterionName: string;
+
+  weightPercentage: number;
+  evaluationCount: number;
+
+  averageScore: number;
+  averageNormalizedScore: number;
+};
+
+export type EvaluationTrendPoint = {
+  evaluationId: string;
+  evaluationDate: string;
+  templateName: string;
+  templateVersion: string;
+  overallScore: number;
+  normalizedScore: number;
+};
+
+export type StudentDevelopmentSummary = {
+  studentId: string;
+  studentNumber: string;
+  firstName: string;
+  lastName: string;
+
+  groupId: string | null;
+  groupCode: string | null;
+  groupName: string | null;
+
+  dateFrom: string | null;
+  dateTo: string | null;
+
+  publishedEvaluationCount: number;
+
+  averageNormalizedScore: number | null;
+  latestNormalizedScore: number | null;
+  scoreTrend: number | null;
+
+  passingEvaluationCount: number;
+  passingRateDenominator: number;
+  passingRate: number;
+
+  attendancePercentage: number | null;
+  groupCurriculumCompletionPercentage:
+  | number
+  | null;
+
+  developmentStatus: DevelopmentStatus;
+
+  criterionAverages: CriterionAverage[];
+  trend: EvaluationTrendPoint[];
+};
+
+export type GroupStudentPerformance = {
+  studentId: string;
+  studentNumber: string;
+  firstName: string;
+  lastName: string;
+
+  publishedEvaluationCount: number;
+  averageNormalizedScore: number | null;
+  latestNormalizedScore: number | null;
+  scoreTrend: number | null;
+
+  developmentStatus: DevelopmentStatus;
+};
+
+export type GroupPerformanceSummary = {
+  groupId: string;
+  groupCode: string;
+  groupName: string;
+
+  programId: string;
+  programName: string;
+
+  termId: string;
+  termName: string;
+
+  dateFrom: string | null;
+  dateTo: string | null;
+
+  studentCount: number;
+  publishedEvaluationCount: number;
+  averageNormalizedScore: number | null;
+
+  passingEvaluationCount: number;
+  passingRateDenominator: number;
+  passingRate: number;
+
+  students: GroupStudentPerformance[];
+};
+
+export type EvaluationReportFilters = {
+  groupId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+};

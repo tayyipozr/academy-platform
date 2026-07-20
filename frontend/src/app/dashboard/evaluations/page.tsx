@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+
+import {
+  Suspense,
+  useState,
+} from "react";
 
 import {
   useMutation,
@@ -35,7 +39,9 @@ import { getGroups } from "@/features/groups/api";
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
 
-export default function EvaluationsPage() {
+import { useSearchParams } from "next/navigation";
+
+function EvaluationsPageContent() {
   const queryClient = useQueryClient();
 
   const currentYear = new Date().getFullYear();
@@ -80,7 +86,13 @@ export default function EvaluationsPage() {
     "evaluations.publish",
   );
 
+  const searchParameters = useSearchParams();
+
+  const studentId =
+    searchParameters.get("studentId") ?? "";
+
   const filters: EvaluationFilters = {
+    studentId: studentId || undefined,
     groupId: groupId || undefined,
     status,
     dateFrom: dateFrom || undefined,
@@ -189,6 +201,12 @@ export default function EvaluationsPage() {
                 </p>
               </div>
 
+              {studentId && (
+                <div className="mt-5 rounded-lg bg-blue-50 p-4 text-sm text-blue-800">
+                  Results are filtered to the selected student.
+                </div>
+              )}
+
               {canManage && (
                 <Link
                   href="/dashboard/evaluations/new"
@@ -237,8 +255,8 @@ export default function EvaluationsPage() {
                   onChange={(event) =>
                     setStatus(
                       event.target.value as
-                        | StudentEvaluationStatus
-                        | "",
+                      | StudentEvaluationStatus
+                      | "",
                     )
                   }
                   className="w-full rounded-lg border px-3 py-2"
@@ -316,10 +334,10 @@ export default function EvaluationsPage() {
 
               {evaluationsQuery.data?.length ===
                 0 && (
-                <div className="p-10 text-center text-slate-500">
-                  No evaluations were found.
-                </div>
-              )}
+                  <div className="p-10 text-center text-slate-500">
+                    No evaluations were found.
+                  </div>
+                )}
 
               {evaluationsQuery.data &&
                 evaluationsQuery.data.length > 0 && (
@@ -421,14 +439,14 @@ export default function EvaluationsPage() {
                                   className="rounded border px-3 py-1.5 text-sm"
                                 >
                                   {evaluation.status ===
-                                  "DRAFT"
+                                    "DRAFT"
                                     ? "Edit"
                                     : "View"}
                                 </Link>
 
                                 {canPublish &&
                                   evaluation.status ===
-                                    "SUBMITTED" && (
+                                  "SUBMITTED" && (
                                     <button
                                       type="button"
                                       disabled={
@@ -443,7 +461,7 @@ export default function EvaluationsPage() {
                                       className="rounded border border-green-300 px-3 py-1.5 text-sm text-green-700 disabled:opacity-50"
                                     >
                                       {publishingId ===
-                                      evaluation.id
+                                        evaluation.id
                                         ? "Publishing..."
                                         : "Publish"}
                                     </button>
@@ -484,5 +502,21 @@ function FilterField({
 
       <div className="mt-1">{children}</div>
     </div>
+  );
+}
+
+export default function EvaluationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-slate-100">
+          <p className="text-slate-600">
+            Loading evaluations...
+          </p>
+        </main>
+      }
+    >
+      <EvaluationsPageContent />
+    </Suspense>
   );
 }

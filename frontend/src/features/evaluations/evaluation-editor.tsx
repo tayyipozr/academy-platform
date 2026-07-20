@@ -41,6 +41,7 @@ import {
 import { getSessions } from "@/features/scheduling/api";
 
 import { getApiErrorMessage } from "@/lib/api/error-message";
+import Link from "next/link";
 
 type EvaluationEditorProps = {
   initialEvaluation?: StudentEvaluation;
@@ -82,7 +83,7 @@ export function EvaluationEditor({
   const [evaluationDate, setEvaluationDate] =
     useState(
       initialEvaluation?.evaluationDate ??
-        todayDate(),
+      todayDate(),
     );
 
   const [evaluatorComment, setEvaluatorComment] =
@@ -359,7 +360,7 @@ export function EvaluationEditor({
   }
 
   function createRequest():
-  SaveStudentEvaluationRequest {
+    SaveStudentEvaluationRequest {
     return {
       studentId,
       groupId,
@@ -415,7 +416,7 @@ export function EvaluationEditor({
   }
 
   async function saveDraft():
-  Promise<StudentEvaluation | null> {
+    Promise<StudentEvaluation | null> {
     const validationError =
       validateRequiredFields();
 
@@ -432,13 +433,13 @@ export function EvaluationEditor({
 
       const result = initialEvaluation
         ? await updateMutation.mutateAsync({
-            evaluationId:
-              initialEvaluation.id,
-            request,
-          })
+          evaluationId:
+            initialEvaluation.id,
+          request,
+        })
         : await createMutation.mutateAsync(
-            request,
-          );
+          request,
+        );
 
       await queryClient.invalidateQueries({
         queryKey: evaluationQueryKeys.all,
@@ -800,11 +801,11 @@ export function EvaluationEditor({
             label="Passing score"
             value={
               selectedTemplate.passingScore ===
-              null
+                null
                 ? "Not defined"
                 : formatNumber(
-                    selectedTemplate.passingScore,
-                  )
+                  selectedTemplate.passingScore,
+                )
             }
           />
 
@@ -813,8 +814,8 @@ export function EvaluationEditor({
             value={
               liveCalculation.complete
                 ? liveCalculation.overall.toFixed(
-                    2,
-                  )
+                  2,
+                )
                 : "Incomplete"
             }
           />
@@ -865,9 +866,9 @@ export function EvaluationEditor({
                   scoreNumber === null
                     ? null
                     : (
-                        scoreNumber *
-                        criterion.weightPercentage
-                      ) / 100;
+                      scoreNumber *
+                      criterion.weightPercentage
+                    ) / 100;
 
                 return (
                   <article

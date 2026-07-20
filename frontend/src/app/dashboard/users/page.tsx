@@ -35,7 +35,6 @@ import { DashboardHeader } from "@/components/dashboard-header";
 import { ApiError } from "@/lib/api/api-client";
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import {
-  hasEveryPermission,
   hasPermission,
 } from "@/lib/permissions";
 
