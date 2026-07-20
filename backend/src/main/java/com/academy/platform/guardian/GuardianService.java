@@ -432,6 +432,100 @@ public class GuardianService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public List<GuardianLinkedStudentResponse>
+            findLinkedStudents(
+                    UUID organizationId,
+                    UUID membershipId
+            ) {
+        return jdbcTemplate.query(
+                """
+            SELECT
+                s.id AS student_id,
+                s.student_number,
+                s.first_name,
+                s.last_name,
+                s.birth_date,
+                s.status,
+                s.branch_id,
+                b.name AS branch_name,
+                sg.relationship_type,
+                sg.primary_contact,
+                sg.legal_guardian,
+                sg.pickup_authorized
+
+            FROM guardians g
+
+            JOIN student_guardians sg
+                ON sg.guardian_id = g.id
+               AND sg.organization_id =
+                   g.organization_id
+
+            JOIN students s
+                ON s.id = sg.student_id
+               AND s.organization_id =
+                   sg.organization_id
+
+            LEFT JOIN branches b
+                ON b.id = s.branch_id
+               AND b.organization_id =
+                   s.organization_id
+
+            WHERE g.organization_id = ?
+              AND g.membership_id = ?
+              AND g.status = 'ACTIVE'
+              AND s.status <> 'ARCHIVED'
+
+            ORDER BY
+                s.first_name,
+                s.last_name,
+                s.student_number
+            """,
+                (resultSet, rowNumber)
+                -> new GuardianLinkedStudentResponse(
+                        resultSet.getObject(
+                                "student_id",
+                                UUID.class
+                        ),
+                        resultSet.getString(
+                                "student_number"
+                        ),
+                        resultSet.getString(
+                                "first_name"
+                        ),
+                        resultSet.getString(
+                                "last_name"
+                        ),
+                        resultSet.getObject(
+                                "birth_date",
+                                java.time.LocalDate.class
+                        ),
+                        resultSet.getString("status"),
+                        resultSet.getObject(
+                                "branch_id",
+                                UUID.class
+                        ),
+                        resultSet.getString(
+                                "branch_name"
+                        ),
+                        resultSet.getString(
+                                "relationship_type"
+                        ),
+                        resultSet.getBoolean(
+                                "primary_contact"
+                        ),
+                        resultSet.getBoolean(
+                                "legal_guardian"
+                        ),
+                        resultSet.getBoolean(
+                                "pickup_authorized"
+                        )
+                ),
+                organizationId,
+                membershipId
+        );
+    }
+
     private void validateRequest(
             SaveGuardianRequest request
     ) {

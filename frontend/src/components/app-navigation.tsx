@@ -18,6 +18,11 @@ const navigationItems: NavigationItem[] = [
     label: "Dashboard",
   },
   {
+    href: "/dashboard/my-children",
+    label: "My Children",
+    permission: "guardian.linked-students.read",
+  },
+  {
     href: "/dashboard/users",
     label: "Users",
     permission: "users.read",

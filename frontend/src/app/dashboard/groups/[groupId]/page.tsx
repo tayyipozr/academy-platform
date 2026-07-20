@@ -547,6 +547,18 @@ export default function GroupDetailPage() {
                             {group.status}
                         </span>
                     </div>
+
+                    {hasPermission(
+                        currentUser,
+                        "attendance.read",
+                    ) && (
+                            <Link
+                                href={`/dashboard/groups/${group.id}/attendance`}
+                                className="rounded-lg border border-green-300 px-4 py-2 font-medium text-green-700 hover:bg-green-50"
+                            >
+                                Attendance report
+                            </Link>
+                        )}
                 </header>
 
                 <section className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">

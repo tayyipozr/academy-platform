@@ -112,3 +112,109 @@ export type AttendanceCorrection = {
   changeCount: number;
   changes: AttendanceChange[];
 };
+
+export type StudentAttendanceItem = {
+  attendanceRecordId: string;
+  sessionId: string;
+  groupId: string;
+  groupCode: string;
+  groupName: string;
+  termId: string;
+  termCode: string;
+  termName: string;
+  sessionTitle: string;
+  sessionDate: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+  status: AttendanceStatus;
+  arrivalTime: string | null;
+  departureTime: string | null;
+  note: string | null;
+  recordedAt: string | null;
+  finalizedAt: string;
+};
+
+export type StudentAttendanceSummary = {
+  studentId: string;
+  studentNumber: string;
+  firstName: string;
+  lastName: string;
+  dateFrom: string | null;
+  dateTo: string | null;
+  groupId: string | null;
+  termId: string | null;
+  totalFinalizedSessions: number;
+  presentCount: number;
+  lateCount: number;
+  absentCount: number;
+  excusedCount: number;
+  attendedCount: number;
+  percentageDenominator: number;
+  attendancePercentage: number;
+  records: StudentAttendanceItem[];
+};
+
+export type GroupStudentAttendanceSummary = {
+  studentId: string;
+  studentNumber: string;
+  firstName: string;
+  lastName: string;
+  totalFinalizedSessions: number;
+  presentCount: number;
+  lateCount: number;
+  absentCount: number;
+  excusedCount: number;
+  attendedCount: number;
+  percentageDenominator: number;
+  attendancePercentage: number;
+};
+
+export type GroupAttendanceSummary = {
+  groupId: string;
+  groupCode: string;
+  groupName: string;
+  programId: string;
+  programName: string;
+  termId: string;
+  termCode: string;
+  termName: string;
+  dateFrom: string | null;
+  dateTo: string | null;
+  finalizedSessionCount: number;
+  attendanceRecordCount: number;
+  presentCount: number;
+  lateCount: number;
+  absentCount: number;
+  excusedCount: number;
+  attendedCount: number;
+  percentageDenominator: number;
+  attendancePercentage: number;
+  students: GroupStudentAttendanceSummary[];
+};
+
+export type GuardianLinkedStudent = {
+  studentId: string;
+  studentNumber: string;
+  firstName: string;
+  lastName: string;
+  birthDate: string | null;
+  status: string;
+  branchId: string | null;
+  branchName: string | null;
+  relationshipType: string;
+  primaryContact: boolean;
+  legalGuardian: boolean;
+  pickupAuthorized: boolean;
+};
+
+export type StudentAttendanceFilters = {
+  dateFrom?: string;
+  dateTo?: string;
+  groupId?: string;
+  termId?: string;
+};
+
+export type GroupAttendanceFilters = {
+  dateFrom?: string;
+  dateTo?: string;
+};

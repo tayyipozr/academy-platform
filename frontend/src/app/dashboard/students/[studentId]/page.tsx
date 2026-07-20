@@ -38,6 +38,7 @@ import type {
 import { ApiError } from "@/lib/api/api-client";
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
+import { StudentAttendancePanel } from "@/features/attendance/student-attendance-panel";
 
 export default function StudentDetailPage() {
     const parameters = useParams<{
@@ -75,6 +76,11 @@ export default function StudentDetailPage() {
     const canManage = hasPermission(
         currentUser,
         "students.manage",
+    );
+
+    const canReadAttendance = hasPermission(
+        currentUser,
+        "attendance.read",
     );
 
     const studentQuery = useQuery({
@@ -471,6 +477,14 @@ export default function StudentDetailPage() {
                         </p>
                     </section>
                 </div>
+
+                {canReadAttendance && (
+                    <div className="mt-8">
+                        <StudentAttendancePanel
+                            studentId={student.id}
+                        />
+                    </div>
+                )}
 
                 <section className="mt-6 overflow-hidden rounded-xl bg-white shadow-sm">
                     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 p-6">

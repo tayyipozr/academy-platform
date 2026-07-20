@@ -4,10 +4,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import com.academy.platform.authentication.AuthenticatedUser;
-
-import jakarta.validation.Valid;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +15,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.academy.platform.authentication.AuthenticatedUser;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/guardians")
@@ -35,14 +35,9 @@ public class GuardianController {
     @GetMapping
     @PreAuthorize("hasAuthority('guardians.read')")
     public List<GuardianResponse> findGuardians(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @RequestParam(defaultValue = "")
-            String search,
-
-            @RequestParam(defaultValue = "false")
-            boolean includeArchived
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @RequestParam(defaultValue = "") String search,
+            @RequestParam(defaultValue = "false") boolean includeArchived
     ) {
         return guardianService.findGuardians(
                 currentUser.organizationId(),
@@ -54,11 +49,8 @@ public class GuardianController {
     @GetMapping("/{guardianId}")
     @PreAuthorize("hasAuthority('guardians.read')")
     public GuardianResponse findGuardian(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID guardianId
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID guardianId
     ) {
         return guardianService.findGuardian(
                 currentUser.organizationId(),
@@ -69,15 +61,12 @@ public class GuardianController {
     @PostMapping
     @PreAuthorize("hasAuthority('guardians.manage')")
     public ResponseEntity<GuardianResponse> createGuardian(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
             @Valid
-            @RequestBody
-            SaveGuardianRequest request
+            @RequestBody SaveGuardianRequest request
     ) {
-        GuardianResponse guardian =
-                guardianService.createGuardian(
+        GuardianResponse guardian
+                = guardianService.createGuardian(
                         currentUser,
                         request
                 );
@@ -86,7 +75,7 @@ public class GuardianController {
                 .created(
                         URI.create(
                                 "/api/v1/guardians/"
-                                        + guardian.id()
+                                + guardian.id()
                         )
                 )
                 .body(guardian);
@@ -95,15 +84,10 @@ public class GuardianController {
     @PutMapping("/{guardianId}")
     @PreAuthorize("hasAuthority('guardians.manage')")
     public GuardianResponse updateGuardian(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID guardianId,
-
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID guardianId,
             @Valid
-            @RequestBody
-            SaveGuardianRequest request
+            @RequestBody SaveGuardianRequest request
     ) {
         return guardianService.updateGuardian(
                 currentUser,
@@ -115,14 +99,9 @@ public class GuardianController {
     @PostMapping("/{guardianId}/status/{status}")
     @PreAuthorize("hasAuthority('guardians.manage')")
     public ResponseEntity<Void> updateStatus(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID guardianId,
-
-            @PathVariable
-            GuardianStatus status
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID guardianId,
+            @PathVariable GuardianStatus status
     ) {
         guardianService.updateGuardianStatus(
                 currentUser,
@@ -131,5 +110,19 @@ public class GuardianController {
         );
 
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me/students")
+    @PreAuthorize(
+            "hasAuthority('guardian.linked-students.read')"
+    )
+    public List<GuardianLinkedStudentResponse>
+            findMyLinkedStudents(
+                    @AuthenticationPrincipal AuthenticatedUser currentUser
+            ) {
+        return guardianService.findLinkedStudents(
+                currentUser.organizationId(),
+                currentUser.membershipId()
+        );
     }
 }

@@ -5,18 +5,14 @@ import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.UUID;
 
+import org.junit.jupiter.api.Test;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.academy.platform.IntegrationTestSupport;
 
 import jakarta.servlet.http.Cookie;
-
-import org.junit.jupiter.api.Test;
-
-import static org.springframework.test.web.servlet.request
-        .MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result
-        .MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result
-        .MockMvcResultMatchers.status;
 
 class AttendanceReportingIntegrationTest
         extends IntegrationTestSupport {
@@ -25,20 +21,20 @@ class AttendanceReportingIntegrationTest
     void studentSummaryUsesOnlyFinalizedAttendance()
             throws Exception {
 
-        Cookie administrator =
-                loginAsAdministrator();
+        Cookie administrator
+                = loginAsAdministrator();
 
-        TestStructure structure =
-                createAttendanceStructure();
+        TestStructure structure
+                = createAttendanceStructure();
 
         mockMvc.perform(
-                        get(
-                                "/api/v1/students/{studentId}"
-                                        + "/attendance-history",
-                                structure.studentId()
-                        )
-                                .cookie(administrator)
+                get(
+                        "/api/v1/students/{studentId}"
+                        + "/attendance-history",
+                        structure.studentId()
                 )
+                        .cookie(administrator)
+        )
                 .andExpect(status().isOk())
                 .andExpect(
                         jsonPath(
@@ -72,11 +68,11 @@ class AttendanceReportingIntegrationTest
     void excusedAttendanceIsExcludedFromPercentage()
             throws Exception {
 
-        Cookie administrator =
-                loginAsAdministrator();
+        Cookie administrator
+                = loginAsAdministrator();
 
-        TestStructure structure =
-                createAttendanceStructure();
+        TestStructure structure
+                = createAttendanceStructure();
 
         createFinalizedAttendance(
                 structure,
@@ -85,13 +81,13 @@ class AttendanceReportingIntegrationTest
         );
 
         mockMvc.perform(
-                        get(
-                                "/api/v1/students/{studentId}"
-                                        + "/attendance-history",
-                                structure.studentId()
-                        )
-                                .cookie(administrator)
+                get(
+                        "/api/v1/students/{studentId}"
+                        + "/attendance-history",
+                        structure.studentId()
                 )
+                        .cookie(administrator)
+        )
                 .andExpect(status().isOk())
                 .andExpect(
                         jsonPath(
@@ -118,20 +114,20 @@ class AttendanceReportingIntegrationTest
     void groupSummaryContainsPerStudentTotals()
             throws Exception {
 
-        Cookie administrator =
-                loginAsAdministrator();
+        Cookie administrator
+                = loginAsAdministrator();
 
-        TestStructure structure =
-                createAttendanceStructure();
+        TestStructure structure
+                = createAttendanceStructure();
 
         mockMvc.perform(
-                        get(
-                                "/api/v1/groups/{groupId}"
-                                        + "/attendance-summary",
-                                structure.groupId()
-                        )
-                                .cookie(administrator)
+                get(
+                        "/api/v1/groups/{groupId}"
+                        + "/attendance-summary",
+                        structure.groupId()
                 )
+                        .cookie(administrator)
+        )
                 .andExpect(status().isOk())
                 .andExpect(
                         jsonPath(
@@ -149,26 +145,26 @@ class AttendanceReportingIntegrationTest
                 .andExpect(
                         jsonPath(
                                 "$.students[0]"
-                                        + ".attendancePercentage"
+                                + ".attendancePercentage"
                         ).value(66.67)
                 );
     }
 
     private TestStructure
-    createAttendanceStructure() {
-        UUID organizationId =
-                findOrganizationId();
+            createAttendanceStructure() {
+        UUID organizationId
+                = findOrganizationId();
 
-        UUID adminUserId =
-                findAdminUserId();
+        UUID adminUserId
+                = findAdminUserId();
 
         String suffix = UUID.randomUUID()
                 .toString()
                 .substring(0, 8)
                 .toUpperCase(Locale.ROOT);
 
-        OffsetDateTime now =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
         UUID programId = UUID.randomUUID();
         UUID termId = UUID.randomUUID();
@@ -261,8 +257,8 @@ class AttendanceReportingIntegrationTest
                 now
         );
 
-        TestStructure structure =
-                new TestStructure(
+        TestStructure structure
+                = new TestStructure(
                         organizationId,
                         groupId,
                         studentId,
@@ -330,14 +326,14 @@ class AttendanceReportingIntegrationTest
     ) {
         UUID sessionId = UUID.randomUUID();
 
-        OffsetDateTime start =
-                OffsetDateTime.parse(startTime);
+        OffsetDateTime start
+                = OffsetDateTime.parse(startTime);
 
-        OffsetDateTime end =
-                start.plusHours(1);
+        OffsetDateTime end
+                = start.plusHours(1);
 
-        OffsetDateTime now =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
         jdbcTemplate.update(
                 """
@@ -409,6 +405,70 @@ class AttendanceReportingIntegrationTest
         );
     }
 
+    @Test
+    void guardianCanViewOnlyLinkedStudentAttendance()
+            throws Exception {
+
+        TestStructure structure
+                = createAttendanceStructure();
+
+        GuardianAccount guardian
+                = createGuardianAccount(
+                        structure.organizationId(),
+                        structure.studentId()
+                );
+
+        Cookie guardianCookie = login(
+                guardian.email(),
+                "GuardianPassword123!",
+                "test-academy"
+        );
+
+        mockMvc.perform(
+                get(
+                        "/api/v1/guardians/me/students"
+                )
+                        .cookie(guardianCookie)
+        )
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$[0].studentId")
+                                .value(
+                                        structure.studentId()
+                                                .toString()
+                                )
+                );
+
+        mockMvc.perform(
+                get(
+                        "/api/v1/students/{studentId}"
+                        + "/attendance-history",
+                        structure.studentId()
+                )
+                        .cookie(guardianCookie)
+        )
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$.presentCount")
+                                .value(1)
+                );
+
+        UUID unlinkedStudentId
+                = createUnlinkedStudent(
+                        structure.organizationId()
+                );
+
+        mockMvc.perform(
+                get(
+                        "/api/v1/students/{studentId}"
+                        + "/attendance-history",
+                        unlinkedStudentId
+                )
+                        .cookie(guardianCookie)
+        )
+                .andExpect(status().isNotFound());
+    }
+
     private UUID findOrganizationId() {
         return jdbcTemplate.queryForObject(
                 """
@@ -437,6 +497,236 @@ class AttendanceReportingIntegrationTest
             UUID groupId,
             UUID studentId,
             UUID adminUserId
+            ) {
+
+    }
+
+    private GuardianAccount createGuardianAccount(
+            UUID organizationId,
+            UUID studentId
     ) {
+        UUID userId = UUID.randomUUID();
+        UUID membershipId = UUID.randomUUID();
+        UUID guardianId = UUID.randomUUID();
+
+        String email
+                = "guardian-" + userId + "@test.com";
+
+        OffsetDateTime now
+                = OffsetDateTime.now(ZoneOffset.UTC);
+
+        UUID guardianRoleId
+                = findRoleId("GUARDIAN");
+
+        jdbcTemplate.update(
+                """
+            INSERT INTO users
+            (
+                id,
+                email,
+                password_hash,
+                first_name,
+                last_name,
+                status,
+                created_at,
+                updated_at,
+                version
+            )
+            VALUES (
+                ?,
+                ?,
+                ?,
+                'Report',
+                'Guardian',
+                'ACTIVE',
+                ?,
+                ?,
+                0
+            )
+            """,
+                userId,
+                email,
+                passwordEncoder.encode(
+                        "GuardianPassword123!"
+                ),
+                now,
+                now
+        );
+
+        jdbcTemplate.update(
+                """
+            INSERT INTO organization_memberships
+            (
+                id,
+                organization_id,
+                user_id,
+                status,
+                display_first_name,
+                display_last_name,
+                security_version,
+                joined_at,
+                created_at,
+                updated_at,
+                version
+            )
+            VALUES (
+                ?,
+                ?,
+                ?,
+                'ACTIVE',
+                'Report',
+                'Guardian',
+                0,
+                ?,
+                ?,
+                ?,
+                0
+            )
+            """,
+                membershipId,
+                organizationId,
+                userId,
+                now,
+                now,
+                now
+        );
+
+        jdbcTemplate.update(
+                """
+            INSERT INTO membership_roles
+                (membership_id, role_id)
+            VALUES (?, ?)
+            """,
+                membershipId,
+                guardianRoleId
+        );
+
+        jdbcTemplate.update(
+                """
+            INSERT INTO guardians
+            (
+                id,
+                organization_id,
+                membership_id,
+                guardian_number,
+                status,
+                created_at,
+                updated_at,
+                version
+            )
+            VALUES (
+                ?,
+                ?,
+                ?,
+                ?,
+                'ACTIVE',
+                ?,
+                ?,
+                0
+            )
+            """,
+                guardianId,
+                organizationId,
+                membershipId,
+                "GRD-" + guardianId
+                        .toString()
+                        .substring(0, 8)
+                        .toUpperCase(
+                                java.util.Locale.ROOT
+                        ),
+                now,
+                now
+        );
+
+        jdbcTemplate.update(
+                """
+            INSERT INTO student_guardians
+            (
+                organization_id,
+                student_id,
+                guardian_id,
+                relationship_type,
+                primary_contact,
+                legal_guardian,
+                pickup_authorized,
+                receives_notifications,
+                internal_media_consent,
+                marketing_media_consent,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                ?,
+                ?,
+                ?,
+                'LEGAL_GUARDIAN',
+                TRUE,
+                TRUE,
+                TRUE,
+                TRUE,
+                FALSE,
+                FALSE,
+                ?,
+                ?
+            )
+            """,
+                organizationId,
+                studentId,
+                guardianId,
+                now,
+                now
+        );
+
+        return new GuardianAccount(email);
+    }
+
+    private UUID createUnlinkedStudent(
+            UUID organizationId
+    ) {
+        UUID studentId = UUID.randomUUID();
+
+        jdbcTemplate.update(
+                """
+            INSERT INTO students
+            (
+                id,
+                organization_id,
+                student_number,
+                first_name,
+                last_name,
+                status,
+                created_at,
+                updated_at,
+                version
+            )
+            VALUES (
+                ?,
+                ?,
+                ?,
+                'Unlinked',
+                'Student',
+                'ACTIVE',
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP,
+                0
+            )
+            """,
+                studentId,
+                organizationId,
+                "STU-" + studentId
+                        .toString()
+                        .substring(0, 8)
+                        .toUpperCase(
+                                java.util.Locale.ROOT
+                        )
+        );
+
+        return studentId;
+    }
+
+    private record GuardianAccount(
+            String email
+            ) {
+
     }
 }
