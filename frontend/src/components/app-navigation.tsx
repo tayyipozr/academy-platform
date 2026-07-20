@@ -44,6 +44,10 @@ const navigationItems: NavigationItem[] = [
     href: "/dashboard/curricula",
     label: "Curricula",
     permission: "curricula.read",
+  }, {
+    href: "/dashboard/evaluation-templates",
+    label: "Evaluation Models",
+    permission: "evaluations.read",
   },
   {
     href: "/dashboard/groups",
