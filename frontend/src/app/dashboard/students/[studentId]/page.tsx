@@ -48,6 +48,10 @@ import {
     MediaGallery,
 } from "@/features/media/media-gallery";
 
+import {
+    StudentProgressReportPanel,
+} from "@/features/reporting/student-progress-report-panel";
+
 export default function StudentDetailPage() {
     const parameters = useParams<{
         studentId: string;
@@ -109,6 +113,11 @@ export default function StudentDetailPage() {
     const canLinkMedia = hasPermission(
         currentUser,
         "media.link",
+    );
+
+    const canExportReports = hasPermission(
+        currentUser,
+        "reports.export",
     );
 
     const studentQuery = useQuery({
@@ -533,6 +542,18 @@ export default function StudentDetailPage() {
                         />
                     </div>
                 )}
+
+                {hasPermission(
+                    currentUser,
+                    "reports.read",
+                ) && (
+                        <div className="mt-10">
+                            <StudentProgressReportPanel
+                                studentId={student.id}
+                                canExport={canExportReports}
+                            />
+                        </div>
+                    )}
 
                 {canReadMedia && (
                     <div className="mt-8">

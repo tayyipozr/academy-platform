@@ -30,6 +30,10 @@ import {
     MediaGallery,
 } from "@/features/media/media-gallery";
 
+import {
+    StudentProgressReportPanel,
+} from "@/features/reporting/student-progress-report-panel";
+
 export default function MyChildrenPage() {
     const [selectedStudentId, setSelectedStudentId] =
         useState<string | null>(null);
@@ -49,6 +53,11 @@ export default function MyChildrenPage() {
     const canReadReports = hasPermission(
         currentUser,
         "guardian.reports.read",
+    );
+
+    const canExportReports = hasPermission(
+        currentUser,
+        "reports.export",
     );
 
     const linkedStudentsQuery = useQuery({
@@ -227,6 +236,22 @@ export default function MyChildrenPage() {
                                     />
                                 </div>
                             )}
+
+                            {selectedStudent &&
+                                hasPermission(
+                                    currentUser,
+                                    "guardian.reports.read",
+                                ) && (
+                                    <div className="mt-10">
+                                        <StudentProgressReportPanel
+                                            studentId={
+                                                selectedStudent.studentId
+                                            }
+                                            canExport={canExportReports}
+                                            showGroupFilter={false}
+                                        />
+                                    </div>
+                                )}
 
                             {selectedStudent &&
                                 hasPermission(currentUser, "media.read") && (
