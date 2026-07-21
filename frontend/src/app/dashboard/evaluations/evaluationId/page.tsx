@@ -22,6 +22,10 @@ import {
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
 
+import {
+    MediaGallery,
+} from "@/features/media/media-gallery";
+
 export default function EvaluationDetailPage() {
     const parameters = useParams<{
         evaluationId: string;
@@ -138,6 +142,26 @@ export default function EvaluationDetailPage() {
                     canManage={canManage}
                     canPublish={canPublish}
                 />
+
+                {hasPermission(currentUser, "media.read") && (
+                    <div className="mt-8">
+                        <MediaGallery
+                            target={{
+                                type: "EVALUATION",
+                                id: evaluationQuery.data.id,
+                            }}
+                            title="Evaluation attachments"
+                            canUpload={hasPermission(
+                                currentUser,
+                                "media.upload",
+                            )}
+                            canManage={hasPermission(
+                                currentUser,
+                                "media.link",
+                            )}
+                        />
+                    </div>
+                )}
             </main>
         </div>
     );

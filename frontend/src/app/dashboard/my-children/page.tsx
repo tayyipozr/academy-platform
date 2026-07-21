@@ -26,6 +26,10 @@ import {
     StudentDevelopmentPanel,
 } from "@/features/evaluations/student-development-panel";
 
+import {
+    MediaGallery,
+} from "@/features/media/media-gallery";
+
 export default function MyChildrenPage() {
     const [selectedStudentId, setSelectedStudentId] =
         useState<string | null>(null);
@@ -223,6 +227,22 @@ export default function MyChildrenPage() {
                                     />
                                 </div>
                             )}
+
+                            {selectedStudent &&
+                                hasPermission(currentUser, "media.read") && (
+                                    <div className="mt-10">
+                                        <MediaGallery
+                                            target={{
+                                                type: "STUDENT",
+                                                id: selectedStudent.studentId,
+                                            }}
+                                            title="Student media"
+                                            canUpload={false}
+                                            canManage={false}
+                                            guardianMode
+                                        />
+                                    </div>
+                                )}
                         </>
                     )}
             </main>

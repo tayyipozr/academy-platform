@@ -49,6 +49,10 @@ import { getStudents } from "@/features/students/api";
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
 
+import {
+    MediaGallery,
+} from "@/features/media/media-gallery";
+
 type DialogState =
     | { type: "enroll" }
     | {
@@ -122,6 +126,21 @@ export default function GroupDetailPage() {
     const canManageStaffAssignments = hasPermission(
         currentUser,
         "group_staff.manage",
+    );
+
+    const canReadMedia = hasPermission(
+        currentUser,
+        "media.read",
+    );
+
+    const canUploadMedia = hasPermission(
+        currentUser,
+        "media.upload",
+    );
+
+    const canLinkMedia = hasPermission(
+        currentUser,
+        "media.link",
     );
 
     const groupQuery = useQuery({
@@ -567,6 +586,20 @@ export default function GroupDetailPage() {
                                     Performance report
                                 </Link>
                             )}
+
+                        {canReadMedia && (
+                            <div className="mt-8">
+                                <MediaGallery
+                                    target={{
+                                        type: "GROUP",
+                                        id: group.id,
+                                    }}
+                                    title="Group media"
+                                    canUpload={canUploadMedia}
+                                    canManage={canLinkMedia}
+                                />
+                            </div>
+                        )}
 
                         <span className="rounded-full bg-slate-200 px-3 py-1 text-sm font-medium">
                             {group.status}

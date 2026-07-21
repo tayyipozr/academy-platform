@@ -46,6 +46,9 @@ import type {
 import { ApiError } from "@/lib/api/api-client";
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
+import {
+    MediaGallery,
+} from "@/features/media/media-gallery";
 
 const statuses: AttendanceStatus[] = [
     "NOT_RECORDED",
@@ -102,6 +105,21 @@ export default function SessionAttendancePage() {
     const canCorrect = hasPermission(
         currentUser,
         "attendance.correct",
+    );
+
+    const canReadMedia = hasPermission(
+        currentUser,
+        "media.read",
+    );
+
+    const canUploadMedia = hasPermission(
+        currentUser,
+        "media.upload",
+    );
+
+    const canLinkMedia = hasPermission(
+        currentUser,
+        "media.link",
     );
 
     const attendanceQuery = useQuery({
@@ -508,6 +526,21 @@ export default function SessionAttendancePage() {
                                         : "Initialize roster"}
                                 </button>
                             )}
+
+                        {canReadMedia && (
+                            <div className="mt-8">
+                                <MediaGallery
+                                    target={{
+                                        type: "SESSION",
+                                        id: attendance.sessionId,
+                                    }}
+                                    title="Session media"
+                                    canUpload={canUploadMedia}
+                                    canManage={canLinkMedia}
+                                />
+                            </div>
+                        )}
+
                     </div>
                 </header>
 

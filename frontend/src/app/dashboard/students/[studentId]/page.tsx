@@ -44,6 +44,10 @@ import {
     StudentDevelopmentPanel,
 } from "@/features/evaluations/student-development-panel";
 
+import {
+    MediaGallery,
+} from "@/features/media/media-gallery";
+
 export default function StudentDetailPage() {
     const parameters = useParams<{
         studentId: string;
@@ -90,6 +94,21 @@ export default function StudentDetailPage() {
     const canReadEvaluations = hasPermission(
         currentUser,
         "evaluations.read",
+    );
+
+    const canReadMedia = hasPermission(
+        currentUser,
+        "media.read",
+    );
+
+    const canUploadMedia = hasPermission(
+        currentUser,
+        "media.upload",
+    );
+
+    const canLinkMedia = hasPermission(
+        currentUser,
+        "media.link",
     );
 
     const studentQuery = useQuery({
@@ -511,6 +530,20 @@ export default function StudentDetailPage() {
                     <div className="mt-8">
                         <StudentDevelopmentPanel
                             studentId={student.id}
+                        />
+                    </div>
+                )}
+
+                {canReadMedia && (
+                    <div className="mt-8">
+                        <MediaGallery
+                            target={{
+                                type: "STUDENT",
+                                id: student.id,
+                            }}
+                            title="Student media"
+                            canUpload={canUploadMedia}
+                            canManage={canLinkMedia}
                         />
                     </div>
                 )}

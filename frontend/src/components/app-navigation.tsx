@@ -10,6 +10,7 @@ type NavigationItem = {
   href: string;
   label: string;
   permission?: string;
+  excludedRoles?: string[];
 };
 
 const navigationItems: NavigationItem[] = [
@@ -87,7 +88,13 @@ const navigationItems: NavigationItem[] = [
     href: "/dashboard/guardians",
     label: "Guardians",
     permission: "guardians.read",
-  }
+  },
+  {
+    href: "/dashboard/media",
+    label: "Media",
+    permission: "media.read",
+    excludedRoles: ["GUARDIAN"],
+  },
 ];
 
 export function AppNavigation({
@@ -98,9 +105,18 @@ export function AppNavigation({
   const pathname = usePathname();
 
   const visibleItems = navigationItems.filter(
-    (item) =>
-      !item.permission ||
-      hasPermission(user, item.permission),
+    (item) => {
+      const hasRequiredPermission =
+        !item.permission ||
+        hasPermission(user, item.permission);
+
+      const excluded =
+        item.excludedRoles?.some((role) =>
+          user.roles.includes(role),
+        ) ?? false;
+
+      return hasRequiredPermission && !excluded;
+    },
   );
 
   return (
