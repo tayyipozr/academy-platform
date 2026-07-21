@@ -75,7 +75,8 @@ public class StandardRoleProvisioningService {
                         "attendance.correct",
                         "media.read",
                         "media.upload",
-                        "media.link"
+                        "media.link",
+                        "reports.export"
                 )
         );
 
@@ -85,7 +86,8 @@ public class StandardRoleProvisioningService {
                         "guardian.portal.read",
                         "guardian.linked-students.read",
                         "guardian.reports.read",
-                        "media.read"
+                        "media.read",
+                        "reports.export"
                 )
         );
     }

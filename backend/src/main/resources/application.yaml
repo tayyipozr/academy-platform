@@ -73,6 +73,7 @@ app:
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
     admin-first-name: ${BOOTSTRAP_ADMIN_FIRST_NAME:System}
     admin-last-name: ${BOOTSTRAP_ADMIN_LAST_NAME:Administrator}
+    
   media:
     endpoint: ${MEDIA_ENDPOINT:http://localhost:9000}
     region: ${MEDIA_REGION:us-east-1}
@@ -88,3 +89,12 @@ app:
     maximum-image-size: 20971520
     maximum-video-size: 524288000
     maximum-document-size: 26214400
+
+  reports:
+    retention: ${REPORT_RETENTION:30d}
+    download-url-duration: ${REPORT_DOWNLOAD_URL_DURATION:5m}
+
+    executor:
+      core-pool-size: ${REPORT_EXECUTOR_CORE_POOL_SIZE:2}
+      maximum-pool-size: ${REPORT_EXECUTOR_MAX_POOL_SIZE:4}
+      queue-capacity: ${REPORT_EXECUTOR_QUEUE_CAPACITY:100}
