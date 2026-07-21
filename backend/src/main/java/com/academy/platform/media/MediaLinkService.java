@@ -8,28 +8,31 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.academy.platform.auditing.AuditService;
 import com.academy.platform.authentication.AuthenticatedUser;
 import com.academy.platform.common.BusinessRuleException;
 import com.academy.platform.common.ConflictException;
 import com.academy.platform.common.ResourceNotFoundException;
 
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 @Service
 public class MediaLinkService {
 
     private final JdbcTemplate jdbcTemplate;
     private final AuditService auditService;
+    private final MediaAccessService mediaAccessService;
 
     public MediaLinkService(
             JdbcTemplate jdbcTemplate,
-            AuditService auditService
+            AuditService auditService,
+            MediaAccessService mediaAccessService
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.auditService = auditService;
+        this.mediaAccessService = mediaAccessService;
     }
 
     @Transactional
@@ -70,8 +73,8 @@ public class MediaLinkService {
 
         UUID linkId = UUID.randomUUID();
 
-        OffsetDateTime now =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
         jdbcTemplate.update(
                 """
@@ -84,12 +87,14 @@ public class MediaLinkService {
                     group_id,
                     session_id,
                     evaluation_id,
-                    caption,
                     cover_media,
                     linked_by,
                     created_at,
                     updated_at,
-                    version
+                    version,
+                    caption,
+                    purpose,
+                    cover_media,
                 )
                 VALUES (
                     ?,
@@ -104,7 +109,10 @@ public class MediaLinkService {
                     ?,
                     ?,
                     ?,
-                    0
+                    0,
+                    ?,
+                    ?,
+                    ?,
                 )
                 """,
                 linkId,
@@ -127,6 +135,7 @@ public class MediaLinkService {
                         MediaTargetType.EVALUATION
                 ),
                 normalizeNullable(request.caption()),
+                request.purpose().name(),
                 request.coverMedia(),
                 actor.userId(),
                 now,
@@ -139,11 +148,11 @@ public class MediaLinkService {
                 "MEDIA_LINK",
                 linkId,
                 "Media "
-                        + mediaId
-                        + " linked to "
-                        + request.targetType()
-                        + " "
-                        + request.targetId()
+                + mediaId
+                + " linked to "
+                + request.targetType()
+                + " "
+                + request.targetId()
         );
 
         return findLink(
@@ -174,20 +183,22 @@ public class MediaLinkService {
             );
         }
 
-        OffsetDateTime updatedAt =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime updatedAt
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
         jdbcTemplate.update(
                 """
                 UPDATE media_links
                 SET
-                    caption = ?,
-                    cover_media = ?,
-                    updated_at = ?,
-                    version = version + 1
+                  purpose = ?,
+                  caption = ?,
+                  cover_media = ?,
+                  updated_at = ?,
+                  version = version + 1
                 WHERE id = ?
                   AND organization_id = ?
                 """,
+                request.purpose().name(),
                 normalizeNullable(request.caption()),
                 request.coverMedia(),
                 updatedAt,
@@ -235,9 +246,9 @@ public class MediaLinkService {
                 "MEDIA_LINK",
                 linkId,
                 "Media link removed from "
-                        + link.targetType()
-                        + " "
-                        + link.targetId()
+                + link.targetType()
+                + " "
+                + link.targetId()
         );
     }
 
@@ -252,13 +263,9 @@ public class MediaLinkService {
                 false
         );
 
-        validateTargetAccess(
+        mediaAccessService.authorizeMediaRead(
                 actor,
-                findTarget(
-                        actor.organizationId(),
-                        link.targetType(),
-                        link.targetId()
-                )
+                link.mediaId()
         );
 
         return mapLinkResponse(link);
@@ -276,28 +283,30 @@ public class MediaLinkService {
                 targetId
         );
 
-        validateTargetAccess(actor, target);
+        mediaAccessService.authorizeTargetRead(
+                actor,
+                targetType,
+                targetId
+        );
 
         return jdbcTemplate.query(
                 """
                 SELECT
                     ml.id,
-                    ml.media_id,
-
+                    ml.media_id,    
                     mf.original_filename,
                     mf.content_type,
                     mf.media_type,
                     mf.status AS media_status,
                     mf.actual_size,
                     mf.title AS media_title,
-                    mf.description AS media_description,
-
+                    mf.description AS media_description,    
                     ml.student_id,
                     ml.group_id,
                     ml.session_id,
-                    ml.evaluation_id,
-
+                    ml.evaluation_id,       
                     ml.caption,
+                    ml.purpose,
                     ml.cover_media,
                     ml.linked_by,
                     ml.created_at,
@@ -338,11 +347,11 @@ public class MediaLinkService {
                     ml.cover_media DESC,
                     ml.created_at DESC
                 """,
-                (resultSet, rowNumber) ->
-                        mapLinkRecord(
-                                resultSet,
-                                target
-                        ),
+                (resultSet, rowNumber)
+                -> mapLinkRecord(
+                        resultSet,
+                        target
+                ),
                 actor.organizationId(),
                 targetType.name(),
                 targetId,
@@ -353,9 +362,12 @@ public class MediaLinkService {
                 targetType.name(),
                 targetId
         )
-        .stream()
-        .map(this::mapLinkResponse)
-        .toList();
+                .stream()
+                .filter(link
+                        -> guardianCanSeeLink(actor, link)
+                )
+                .map(this::mapLinkResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -390,6 +402,7 @@ public class MediaLinkService {
                     ml.evaluation_id,
 
                     ml.caption,
+                    ml.purpose,
                     ml.cover_media,
                     ml.linked_by,
                     ml.created_at,
@@ -408,23 +421,23 @@ public class MediaLinkService {
                 ORDER BY ml.created_at
                 """,
                 (resultSet, rowNumber) -> {
-                    MediaTargetType targetType =
-                            determineTargetType(
-                                    resultSet
-                            );
+                    MediaTargetType targetType
+                    = determineTargetType(
+                            resultSet
+                    );
 
-                    UUID targetId =
-                            determineTargetId(
-                                    resultSet,
-                                    targetType
-                            );
+                    UUID targetId
+                    = determineTargetId(
+                            resultSet,
+                            targetType
+                    );
 
-                    TargetRecord target =
-                            findTarget(
-                                    actor.organizationId(),
-                                    targetType,
-                                    targetId
-                            );
+                    TargetRecord target
+                    = findTarget(
+                            actor.organizationId(),
+                            targetType,
+                            targetId
+                    );
 
                     return mapLinkRecord(
                             resultSet,
@@ -434,9 +447,9 @@ public class MediaLinkService {
                 actor.organizationId(),
                 mediaId
         )
-        .stream()
-        .map(this::mapLinkResponse)
-        .toList();
+                .stream()
+                .map(this::mapLinkResponse)
+                .toList();
     }
 
     private MediaRecord findAvailableMedia(
@@ -454,22 +467,22 @@ public class MediaLinkService {
                   AND organization_id = ?
                   AND status <> 'DELETED'
                 """,
-                (resultSet, rowNumber) ->
-                        new MediaRecord(
-                                resultSet.getObject(
-                                        "id",
-                                        UUID.class
-                                ),
-                                resultSet.getObject(
-                                        "uploaded_by",
-                                        UUID.class
-                                ),
-                                MediaStatus.valueOf(
-                                        resultSet.getString(
-                                                "status"
-                                        )
-                                )
+                (resultSet, rowNumber)
+                -> new MediaRecord(
+                        resultSet.getObject(
+                                "id",
+                                UUID.class
                         ),
+                        resultSet.getObject(
+                                "uploaded_by",
+                                UUID.class
+                        ),
+                        MediaStatus.valueOf(
+                                resultSet.getString(
+                                        "status"
+                                )
+                        )
+                ),
                 mediaId,
                 organizationId
         ).stream().findFirst().map(media -> {
@@ -512,28 +525,28 @@ public class MediaLinkService {
     ) {
         return switch (targetType) {
             case STUDENT ->
-                    findStudentTarget(
-                            organizationId,
-                            targetId
-                    );
+                findStudentTarget(
+                organizationId,
+                targetId
+                );
 
             case GROUP ->
-                    findGroupTarget(
-                            organizationId,
-                            targetId
-                    );
+                findGroupTarget(
+                organizationId,
+                targetId
+                );
 
             case SESSION ->
-                    findSessionTarget(
-                            organizationId,
-                            targetId
-                    );
+                findSessionTarget(
+                organizationId,
+                targetId
+                );
 
             case EVALUATION ->
-                    findEvaluationTarget(
-                            organizationId,
-                            targetId
-                    );
+                findEvaluationTarget(
+                organizationId,
+                targetId
+                );
         };
     }
 
@@ -555,19 +568,19 @@ public class MediaLinkService {
                   AND organization_id = ?
                   AND status <> 'ARCHIVED'
                 """,
-                (resultSet, rowNumber) ->
-                        new TargetRecord(
-                                MediaTargetType.STUDENT,
-                                resultSet.getObject(
-                                        "id",
-                                        UUID.class
-                                ),
-                                resultSet.getString(
-                                        "target_name"
-                                ),
-                                null,
-                                null
+                (resultSet, rowNumber)
+                -> new TargetRecord(
+                        MediaTargetType.STUDENT,
+                        resultSet.getObject(
+                                "id",
+                                UUID.class
                         ),
+                        resultSet.getString(
+                                "target_name"
+                        ),
+                        null,
+                        null
+                ),
                 studentId,
                 organizationId
         ).stream().findFirst().orElseThrow(
@@ -590,20 +603,20 @@ public class MediaLinkService {
                 WHERE id = ?
                   AND organization_id = ?
                 """,
-                (resultSet, rowNumber) ->
-                        new TargetRecord(
-                                MediaTargetType.GROUP,
-                                resultSet.getObject(
-                                        "id",
-                                        UUID.class
-                                ),
-                                resultSet.getString("name"),
-                                resultSet.getObject(
-                                        "id",
-                                        UUID.class
-                                ),
-                                null
+                (resultSet, rowNumber)
+                -> new TargetRecord(
+                        MediaTargetType.GROUP,
+                        resultSet.getObject(
+                                "id",
+                                UUID.class
                         ),
+                        resultSet.getString("name"),
+                        resultSet.getObject(
+                                "id",
+                                UUID.class
+                        ),
+                        null
+                ),
                 groupId,
                 organizationId
         ).stream().findFirst().orElseThrow(
@@ -628,23 +641,23 @@ public class MediaLinkService {
                 WHERE id = ?
                   AND organization_id = ?
                 """,
-                (resultSet, rowNumber) ->
-                        new TargetRecord(
-                                MediaTargetType.SESSION,
-                                resultSet.getObject(
-                                        "id",
-                                        UUID.class
-                                ),
-                                resultSet.getString("title"),
-                                resultSet.getObject(
-                                        "group_id",
-                                        UUID.class
-                                ),
-                                resultSet.getObject(
-                                        "scheduled_start",
-                                        OffsetDateTime.class
-                                ).toLocalDate()
+                (resultSet, rowNumber)
+                -> new TargetRecord(
+                        MediaTargetType.SESSION,
+                        resultSet.getObject(
+                                "id",
+                                UUID.class
                         ),
+                        resultSet.getString("title"),
+                        resultSet.getObject(
+                                "group_id",
+                                UUID.class
+                        ),
+                        resultSet.getObject(
+                                "scheduled_start",
+                                OffsetDateTime.class
+                        ).toLocalDate()
+                ),
                 sessionId,
                 organizationId
         ).stream().findFirst().orElseThrow(
@@ -688,25 +701,25 @@ public class MediaLinkService {
                 WHERE se.id = ?
                   AND se.organization_id = ?
                 """,
-                (resultSet, rowNumber) ->
-                        new TargetRecord(
-                                MediaTargetType.EVALUATION,
-                                resultSet.getObject(
-                                        "id",
-                                        UUID.class
-                                ),
-                                resultSet.getString(
-                                        "target_name"
-                                ),
-                                resultSet.getObject(
-                                        "group_id",
-                                        UUID.class
-                                ),
-                                resultSet.getObject(
-                                        "evaluation_date",
-                                        LocalDate.class
-                                )
+                (resultSet, rowNumber)
+                -> new TargetRecord(
+                        MediaTargetType.EVALUATION,
+                        resultSet.getObject(
+                                "id",
+                                UUID.class
                         ),
+                        resultSet.getString(
+                                "target_name"
+                        ),
+                        resultSet.getObject(
+                                "group_id",
+                                UUID.class
+                        ),
+                        resultSet.getObject(
+                                "evaluation_date",
+                                LocalDate.class
+                        )
+                ),
                 evaluationId,
                 organizationId
         ).stream().findFirst().orElseThrow(
@@ -863,12 +876,10 @@ public class MediaLinkService {
 
         validateTargetAccess(actor, target);
 
-        if (
-                !isAdministrator(actor)
+        if (!isAdministrator(actor)
                 && !link.linkedBy().equals(
                         actor.userId()
-                )
-        ) {
+                )) {
             throw new ResourceNotFoundException(
                     "Media link was not found."
             );
@@ -886,11 +897,11 @@ public class MediaLinkService {
                   AND membership_id = ?
                   AND employment_status = 'ACTIVE'
                 """,
-                (resultSet, rowNumber) ->
-                        resultSet.getObject(
-                                "id",
-                                UUID.class
-                        ),
+                (resultSet, rowNumber)
+                -> resultSet.getObject(
+                        "id",
+                        UUID.class
+                ),
                 actor.organizationId(),
                 actor.membershipId()
         ).stream().findFirst().orElseThrow(
@@ -925,7 +936,7 @@ public class MediaLinkService {
         if (count != null && count > 0) {
             throw new ConflictException(
                     "This media file is already linked "
-                            + "to the selected entity."
+                    + "to the selected entity."
             );
         }
     }
@@ -978,6 +989,7 @@ public class MediaLinkService {
                     ml.evaluation_id,
 
                     ml.caption,
+                    ml.purpose,
                     ml.cover_media,
                     ml.linked_by,
                     ml.created_at,
@@ -998,23 +1010,23 @@ public class MediaLinkService {
         return jdbcTemplate.query(
                 sql,
                 (resultSet, rowNumber) -> {
-                    MediaTargetType targetType =
-                            determineTargetType(
-                                    resultSet
-                            );
+                    MediaTargetType targetType
+                    = determineTargetType(
+                            resultSet
+                    );
 
-                    UUID targetId =
-                            determineTargetId(
-                                    resultSet,
-                                    targetType
-                            );
+                    UUID targetId
+                    = determineTargetId(
+                            resultSet,
+                            targetType
+                    );
 
-                    TargetRecord target =
-                            findTarget(
-                                    organizationId,
-                                    targetType,
-                                    targetId
-                            );
+                    TargetRecord target
+                    = findTarget(
+                            organizationId,
+                            targetType,
+                            targetId
+                    );
 
                     return mapLinkRecord(
                             resultSet,
@@ -1065,10 +1077,11 @@ public class MediaLinkService {
                 target.targetType(),
                 target.targetId(),
                 target.targetName(),
-                resultSet.getString("caption"),
-                resultSet.getBoolean(
-                        "cover_media"
+                MediaPurpose.valueOf(
+                        resultSet.getString("purpose")
                 ),
+                resultSet.getString("caption"),
+                resultSet.getBoolean("cover_media"),
                 resultSet.getObject(
                         "linked_by",
                         UUID.class
@@ -1100,6 +1113,7 @@ public class MediaLinkService {
                 link.targetType(),
                 link.targetId(),
                 link.targetName(),
+                link.purpose(),
                 link.caption(),
                 link.coverMedia(),
                 link.linkedBy(),
@@ -1155,10 +1169,14 @@ public class MediaLinkService {
             MediaTargetType targetType
     ) {
         return switch (targetType) {
-            case STUDENT -> "student_id";
-            case GROUP -> "group_id";
-            case SESSION -> "session_id";
-            case EVALUATION -> "evaluation_id";
+            case STUDENT ->
+                "student_id";
+            case GROUP ->
+                "group_id";
+            case SESSION ->
+                "session_id";
+            case EVALUATION ->
+                "evaluation_id";
         };
     }
 
@@ -1168,6 +1186,341 @@ public class MediaLinkService {
         return actor.roles().contains(
                 "ORGANIZATION_ADMIN"
         );
+    }
+
+    private boolean guardianCanSeeLink(
+            AuthenticatedUser actor,
+            LinkRecord link
+    ) {
+        if (!actor.roles().contains("GUARDIAN")) {
+            return true;
+        }
+
+        Integer count = switch (link.targetType()) {
+            case STUDENT ->
+                countGuardianStudentConsent(
+                actor,
+                link.targetId(),
+                link.purpose()
+                );
+
+            case GROUP ->
+                countGuardianGroupConsent(
+                actor,
+                link.targetId(),
+                link.purpose()
+                );
+
+            case SESSION ->
+                countGuardianSessionConsent(
+                actor,
+                link.targetId(),
+                link.purpose()
+                );
+
+            case EVALUATION ->
+                countGuardianEvaluationConsent(
+                actor,
+                link.targetId(),
+                link.purpose()
+                );
+        };
+
+        return count != null && count > 0;
+    }
+
+    private Integer countGuardianStudentConsent(
+            AuthenticatedUser actor,
+            UUID studentId,
+            MediaPurpose purpose
+    ) {
+        return jdbcTemplate.queryForObject(
+                """
+            SELECT COUNT(*)
+            FROM guardians g
+
+            JOIN student_guardians sg
+              ON sg.guardian_id = g.id
+             AND sg.organization_id =
+                 g.organization_id
+
+            WHERE g.organization_id = ?
+              AND g.membership_id = ?
+              AND sg.student_id = ?
+              AND (
+                  (
+                      ? = 'INTERNAL'
+                      AND sg.internal_media_consent = TRUE
+                  )
+                  OR
+                  (
+                      ? = 'MARKETING'
+                      AND sg.marketing_media_consent = TRUE
+                  )
+              )
+            """,
+                Integer.class,
+                actor.organizationId(),
+                actor.membershipId(),
+                studentId,
+                purpose.name(),
+                purpose.name()
+        );
+    }
+
+    private Integer countGuardianGroupConsent(
+            AuthenticatedUser actor,
+            UUID groupId,
+            MediaPurpose purpose
+    ) {
+        return jdbcTemplate.queryForObject(
+                """
+            SELECT COUNT(*)
+            FROM guardians g
+
+            JOIN student_guardians sg
+              ON sg.guardian_id = g.id
+             AND sg.organization_id =
+                 g.organization_id
+
+            JOIN group_enrollments ge
+              ON ge.student_id = sg.student_id
+             AND ge.organization_id =
+                 sg.organization_id
+
+            WHERE g.organization_id = ?
+              AND g.membership_id = ?
+              AND ge.group_id = ?
+              AND ge.status <> 'CANCELLED'
+              AND (
+                  (
+                      ? = 'INTERNAL'
+                      AND sg.internal_media_consent = TRUE
+                  )
+                  OR
+                  (
+                      ? = 'MARKETING'
+                      AND sg.marketing_media_consent = TRUE
+                  )
+              )
+            """,
+                Integer.class,
+                actor.organizationId(),
+                actor.membershipId(),
+                groupId,
+                purpose.name(),
+                purpose.name()
+        );
+    }
+
+    private Integer countGuardianSessionConsent(
+            AuthenticatedUser actor,
+            UUID sessionId,
+            MediaPurpose purpose
+    ) {
+        return jdbcTemplate.queryForObject(
+                """
+            SELECT COUNT(*)
+            FROM guardians g
+
+            JOIN student_guardians sg
+              ON sg.guardian_id = g.id
+             AND sg.organization_id =
+                 g.organization_id
+
+            JOIN lesson_sessions ls
+              ON ls.organization_id =
+                 sg.organization_id
+             AND ls.id = ?
+
+            JOIN organizations o
+              ON o.id = ls.organization_id
+
+            JOIN group_enrollments ge
+              ON ge.organization_id =
+                 ls.organization_id
+             AND ge.group_id = ls.group_id
+             AND ge.student_id =
+                 sg.student_id
+
+            WHERE g.organization_id = ?
+              AND g.membership_id = ?
+              AND ge.status <> 'CANCELLED'
+              AND ge.enrolled_at <=
+                  (
+                      ls.scheduled_start
+                      AT TIME ZONE o.timezone
+                  )::DATE
+              AND (
+                  ge.ended_at IS NULL
+                  OR ge.ended_at >=
+                     (
+                         ls.scheduled_start
+                         AT TIME ZONE o.timezone
+                     )::DATE
+              )
+              AND (
+                  (
+                      ? = 'INTERNAL'
+                      AND sg.internal_media_consent = TRUE
+                  )
+                  OR
+                  (
+                      ? = 'MARKETING'
+                      AND sg.marketing_media_consent = TRUE
+                  )
+              )
+            """,
+                Integer.class,
+                sessionId,
+                actor.organizationId(),
+                actor.membershipId(),
+                purpose.name(),
+                purpose.name()
+        );
+    }
+
+    private Integer countGuardianEvaluationConsent(
+            AuthenticatedUser actor,
+            UUID evaluationId,
+            MediaPurpose purpose
+    ) {
+        return jdbcTemplate.queryForObject(
+                """
+            SELECT COUNT(*)
+            FROM guardians g
+
+            JOIN student_guardians sg
+              ON sg.guardian_id = g.id
+             AND sg.organization_id =
+                 g.organization_id
+
+            JOIN student_evaluations se
+              ON se.student_id = sg.student_id
+             AND se.organization_id =
+                 sg.organization_id
+
+            WHERE g.organization_id = ?
+              AND g.membership_id = ?
+              AND se.id = ?
+              AND se.status = 'PUBLISHED'
+              AND (
+                  (
+                      ? = 'INTERNAL'
+                      AND sg.internal_media_consent = TRUE
+                  )
+                  OR
+                  (
+                      ? = 'MARKETING'
+                      AND sg.marketing_media_consent = TRUE
+                  )
+              )
+            """,
+                Integer.class,
+                actor.organizationId(),
+                actor.membershipId(),
+                evaluationId,
+                purpose.name(),
+                purpose.name()
+        );
+    }
+
+    private String guardianConsentSql(
+            MediaTargetType targetType
+    ) {
+        String consentExpression
+                = """
+            (
+                (? = 'INTERNAL'
+                 AND sg.internal_media_consent = TRUE)
+                OR
+                (? = 'MARKETING'
+                 AND sg.marketing_media_consent = TRUE)
+            )
+            """;
+
+        /*
+     * To keep parameter ordering simple, each SQL query
+     * uses the purpose twice. The calling method below
+     * should therefore pass the purpose twice.
+         */
+        return switch (targetType) {
+            case STUDENT ->
+                """
+                SELECT COUNT(*)
+                FROM guardians g
+                JOIN student_guardians sg
+                  ON sg.guardian_id = g.id
+                 AND sg.organization_id =
+                     g.organization_id
+                WHERE g.organization_id = ?
+                  AND g.membership_id = ?
+                  AND sg.student_id = ?
+                  AND %s
+                """.formatted(consentExpression);
+
+            case GROUP ->
+                """
+                SELECT COUNT(*)
+                FROM guardians g
+                JOIN student_guardians sg
+                  ON sg.guardian_id = g.id
+                 AND sg.organization_id =
+                     g.organization_id
+                JOIN group_enrollments ge
+                  ON ge.student_id = sg.student_id
+                 AND ge.organization_id =
+                     sg.organization_id
+                WHERE g.organization_id = ?
+                  AND g.membership_id = ?
+                  AND ge.group_id = ?
+                  AND ge.status <> 'CANCELLED'
+                  AND %s
+                """.formatted(consentExpression);
+
+            case SESSION ->
+                """
+                SELECT COUNT(*)
+                FROM guardians g
+                JOIN student_guardians sg
+                  ON sg.guardian_id = g.id
+                 AND sg.organization_id =
+                     g.organization_id
+                JOIN lesson_sessions ls
+                  ON ls.organization_id =
+                     sg.organization_id
+                 AND ls.id = ?
+                JOIN group_enrollments ge
+                  ON ge.organization_id =
+                     ls.organization_id
+                 AND ge.group_id = ls.group_id
+                 AND ge.student_id =
+                     sg.student_id
+                WHERE g.organization_id = ?
+                  AND g.membership_id = ?
+                  AND ge.status <> 'CANCELLED'
+                  AND %s
+                """.formatted(consentExpression);
+
+            case EVALUATION ->
+                """
+                SELECT COUNT(*)
+                FROM guardians g
+                JOIN student_guardians sg
+                  ON sg.guardian_id = g.id
+                 AND sg.organization_id =
+                     g.organization_id
+                JOIN student_evaluations se
+                  ON se.student_id = sg.student_id
+                 AND se.organization_id =
+                     sg.organization_id
+                WHERE g.organization_id = ?
+                  AND g.membership_id = ?
+                  AND se.id = ?
+                  AND se.status = 'PUBLISHED'
+                  AND %s
+                """.formatted(consentExpression);
+        };
     }
 
     private String normalizeNullable(
@@ -1184,7 +1537,8 @@ public class MediaLinkService {
             UUID id,
             UUID uploadedBy,
             MediaStatus status
-    ) {
+            ) {
+
     }
 
     private record TargetRecord(
@@ -1193,7 +1547,8 @@ public class MediaLinkService {
             String targetName,
             UUID groupId,
             LocalDate operationDate
-    ) {
+            ) {
+
     }
 
     private record LinkRecord(
@@ -1209,11 +1564,13 @@ public class MediaLinkService {
             MediaTargetType targetType,
             UUID targetId,
             String targetName,
+            MediaPurpose purpose,
             String caption,
             boolean coverMedia,
             UUID linkedBy,
             OffsetDateTime createdAt,
             OffsetDateTime updatedAt
-    ) {
+            ) {
+
     }
 }

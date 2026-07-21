@@ -4,10 +4,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import com.academy.platform.authentication.AuthenticatedUser;
-
-import jakarta.validation.Valid;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +15,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.academy.platform.authentication.AuthenticatedUser;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/media")
@@ -35,18 +35,13 @@ public class MediaLinkController {
     @PostMapping("/{mediaId}/links")
     @PreAuthorize("hasAuthority('media.link')")
     public ResponseEntity<MediaLinkResponse> createLink(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID mediaId,
-
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID mediaId,
             @Valid
-            @RequestBody
-            CreateMediaLinkRequest request
+            @RequestBody CreateMediaLinkRequest request
     ) {
-        MediaLinkResponse link =
-                mediaLinkService.createLink(
+        MediaLinkResponse link
+                = mediaLinkService.createLink(
                         currentUser,
                         mediaId,
                         request
@@ -56,20 +51,17 @@ public class MediaLinkController {
                 .created(
                         URI.create(
                                 "/api/v1/media/links/"
-                                        + link.id()
+                                + link.id()
                         )
                 )
                 .body(link);
     }
 
     @GetMapping("/{mediaId}/links")
-    @PreAuthorize("hasAuthority('media.read')")
+    @PreAuthorize("hasAuthority('media.link')")
     public List<MediaLinkResponse> findMediaLinks(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID mediaId
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID mediaId
     ) {
         return mediaLinkService.findMediaLinks(
                 currentUser,
@@ -80,11 +72,8 @@ public class MediaLinkController {
     @GetMapping("/links/{linkId}")
     @PreAuthorize("hasAuthority('media.read')")
     public MediaLinkResponse findLink(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID linkId
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID linkId
     ) {
         return mediaLinkService.findLink(
                 currentUser,
@@ -95,15 +84,10 @@ public class MediaLinkController {
     @PutMapping("/links/{linkId}")
     @PreAuthorize("hasAuthority('media.link')")
     public MediaLinkResponse updateLink(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID linkId,
-
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID linkId,
             @Valid
-            @RequestBody
-            UpdateMediaLinkRequest request
+            @RequestBody UpdateMediaLinkRequest request
     ) {
         return mediaLinkService.updateLink(
                 currentUser,
@@ -115,11 +99,8 @@ public class MediaLinkController {
     @DeleteMapping("/links/{linkId}")
     @PreAuthorize("hasAuthority('media.link')")
     public ResponseEntity<Void> deleteLink(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID linkId
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID linkId
     ) {
         mediaLinkService.deleteLink(
                 currentUser,
@@ -134,14 +115,9 @@ public class MediaLinkController {
     )
     @PreAuthorize("hasAuthority('media.read')")
     public List<MediaLinkResponse> findTargetMedia(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            MediaTargetType targetType,
-
-            @PathVariable
-            UUID targetId
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable MediaTargetType targetType,
+            @PathVariable UUID targetId
     ) {
         return mediaLinkService.findTargetMedia(
                 currentUser,

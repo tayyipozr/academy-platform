@@ -9,14 +9,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.academy.platform.auditing.AuditService;
 import com.academy.platform.authentication.AuthenticatedUser;
 import com.academy.platform.common.BusinessRuleException;
 import com.academy.platform.common.ResourceNotFoundException;
-
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
@@ -29,17 +29,20 @@ public class MediaService {
     private final MediaObjectStorageService storageService;
     private final MediaStorageProperties properties;
     private final AuditService auditService;
+    private final MediaAccessService mediaAccessService;
 
     public MediaService(
             JdbcTemplate jdbcTemplate,
             MediaObjectStorageService storageService,
             MediaStorageProperties properties,
-            AuditService auditService
+            AuditService auditService,
+            MediaAccessService mediaAccessService
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.storageService = storageService;
         this.properties = properties;
         this.auditService = auditService;
+        this.mediaAccessService = mediaAccessService;
     }
 
     @Transactional
@@ -47,8 +50,8 @@ public class MediaService {
             AuthenticatedUser actor,
             CreateMediaUploadRequest request
     ) {
-        MediaType mediaType =
-                determineMediaType(
+        MediaType mediaType
+                = determineMediaType(
                         request.contentType()
                 );
 
@@ -59,18 +62,18 @@ public class MediaService {
 
         UUID mediaId = UUID.randomUUID();
 
-        String filename =
-                sanitizeFilename(request.filename());
+        String filename
+                = sanitizeFilename(request.filename());
 
-        String storageKey =
-                actor.organizationId()
-                        + "/"
-                        + mediaId
-                        + "/"
-                        + filename;
+        String storageKey
+                = actor.organizationId()
+                + "/"
+                + mediaId
+                + "/"
+                + filename;
 
-        OffsetDateTime now =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
         jdbcTemplate.update(
                 """
@@ -133,9 +136,8 @@ public class MediaService {
                 now
         );
 
-        MediaObjectStorageService.PresignedUpload
-                presignedUpload =
-                storageService.createUploadUrl(
+        MediaObjectStorageService.PresignedUpload presignedUpload
+                = storageService.createUploadUrl(
                         storageKey,
                         request.contentType()
                                 .trim()
@@ -175,7 +177,7 @@ public class MediaService {
         );
 
         if (media.status() == MediaStatus.AVAILABLE) {
-            return findMedia(
+            return findMediaByOrganization(
                     actor.organizationId(),
                     mediaId
             );
@@ -190,13 +192,11 @@ public class MediaService {
         HeadObjectResponse objectMetadata;
 
         try {
-            objectMetadata =
-                    storageService.headObject(
+            objectMetadata
+                    = storageService.headObject(
                             media.storageKey()
                     );
-        } catch (
-                NoSuchKeyException exception
-        ) {
+        } catch (NoSuchKeyException exception) {
             throw new BusinessRuleException(
                     "The uploaded object could not be found."
             );
@@ -210,11 +210,11 @@ public class MediaService {
             throw exception;
         }
 
-        long actualSize =
-                objectMetadata.contentLength();
+        long actualSize
+                = objectMetadata.contentLength();
 
-        String actualContentType =
-                objectMetadata.contentType();
+        String actualContentType
+                = objectMetadata.contentType();
 
         if (actualSize != media.expectedSize()) {
             markFailed(mediaId);
@@ -225,16 +225,14 @@ public class MediaService {
 
             throw new BusinessRuleException(
                     "Uploaded file size does not match "
-                            + "the declared size."
+                    + "the declared size."
             );
         }
 
-        if (
-                actualContentType == null
+        if (actualContentType == null
                 || !actualContentType.equalsIgnoreCase(
                         media.contentType()
-                )
-        ) {
+                )) {
             markFailed(mediaId);
 
             storageService.deleteObject(
@@ -243,12 +241,12 @@ public class MediaService {
 
             throw new BusinessRuleException(
                     "Uploaded file content type does not "
-                            + "match the declared content type."
+                    + "match the declared content type."
             );
         }
 
-        OffsetDateTime completedAt =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime completedAt
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
         jdbcTemplate.update(
                 """
@@ -278,7 +276,7 @@ public class MediaService {
                 "Media upload completed."
         );
 
-        return findMedia(
+        return findMediaByOrganization(
                 actor.organizationId(),
                 mediaId
         );
@@ -286,6 +284,27 @@ public class MediaService {
 
     @Transactional(readOnly = true)
     public MediaResponse findMedia(
+            AuthenticatedUser actor,
+            UUID mediaId
+    ) {
+
+        createDownloadUrl(
+                actor,
+                mediaId
+        );
+
+        mediaAccessService.authorizeMediaRead(
+                actor,
+                mediaId
+        );
+
+        return findMediaByOrganization(
+                actor.organizationId(),
+                mediaId
+        );
+    }
+
+    private MediaResponse findMediaByOrganization(
             UUID organizationId,
             UUID mediaId
     ) {
@@ -310,8 +329,8 @@ public class MediaService {
                   AND organization_id = ?
                   AND status <> 'DELETED'
                 """,
-                (resultSet, rowNumber) ->
-                        mapMedia(resultSet),
+                (resultSet, rowNumber)
+                -> mapMedia(resultSet),
                 mediaId,
                 organizationId
         ).stream().findFirst().orElseThrow(
@@ -323,42 +342,59 @@ public class MediaService {
 
     @Transactional(readOnly = true)
     public List<MediaResponse> findMediaFiles(
-            UUID organizationId,
+            AuthenticatedUser actor,
             MediaType mediaType,
             MediaStatus status
     ) {
+        boolean administrator
+                = actor.roles().contains(
+                        "ORGANIZATION_ADMIN"
+                );
+
         return jdbcTemplate.query(
                 """
-                SELECT
-                    id,
-                    original_filename,
-                    content_type,
-                    media_type,
-                    status,
-                    expected_size,
-                    actual_size,
-                    title,
-                    description,
-                    uploaded_by,
-                    upload_completed_at,
-                    created_at,
-                    updated_at
-                FROM media_files
-                WHERE organization_id = ?
-                  AND status <> 'DELETED'
-                  AND (
-                      ?::VARCHAR IS NULL
-                      OR media_type = ?::VARCHAR
-                  )
-                  AND (
-                      ?::VARCHAR IS NULL
-                      OR status = ?::VARCHAR
-                  )
-                ORDER BY created_at DESC
-                """,
-                (resultSet, rowNumber) ->
-                        mapMedia(resultSet),
-                organizationId,
+            SELECT
+                id,
+                original_filename,
+                content_type,
+                media_type,
+                status,
+                expected_size,
+                actual_size,
+                title,
+                description,
+                uploaded_by,
+                upload_completed_at,
+                created_at,
+                updated_at
+
+            FROM media_files
+
+            WHERE organization_id = ?
+              AND status <> 'DELETED'
+
+              AND (
+                  ? = TRUE
+                  OR uploaded_by = ?
+              )
+
+              AND (
+                  ?::VARCHAR IS NULL
+                  OR media_type = ?::VARCHAR
+              )
+
+              AND (
+                  ?::VARCHAR IS NULL
+                  OR status = ?::VARCHAR
+              )
+
+            ORDER BY created_at DESC
+            """,
+                (resultSet, rowNumber)
+                -> mapMedia(resultSet),
+                actor.organizationId(),
+                administrator,
+                actor.userId(),
                 mediaType == null
                         ? null
                         : mediaType.name(),
@@ -379,6 +415,11 @@ public class MediaService {
             AuthenticatedUser actor,
             UUID mediaId
     ) {
+        mediaAccessService.authorizeMediaRead(
+                actor,
+                mediaId
+        );
+
         MediaRecord media = findRecord(
                 actor.organizationId(),
                 mediaId
@@ -390,9 +431,8 @@ public class MediaService {
             );
         }
 
-        MediaObjectStorageService.PresignedDownload
-                download =
-                storageService.createDownloadUrl(
+        MediaObjectStorageService.PresignedDownload download
+                = storageService.createDownloadUrl(
                         media.storageKey(),
                         media.originalFilename()
                 );
@@ -417,17 +457,15 @@ public class MediaService {
             return;
         }
 
-        if (
-                media.status() == MediaStatus.AVAILABLE
-                || media.status() == MediaStatus.PENDING
-        ) {
+        if (media.status() == MediaStatus.AVAILABLE
+                || media.status() == MediaStatus.PENDING) {
             storageService.deleteObject(
                     media.storageKey()
             );
         }
 
-        OffsetDateTime deletedAt =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime deletedAt
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
         jdbcTemplate.update(
                 """
@@ -501,35 +539,35 @@ public class MediaService {
 
         return jdbcTemplate.query(
                 sql,
-                (resultSet, rowNumber) ->
-                        new MediaRecord(
-                                resultSet.getObject(
-                                        "id",
-                                        UUID.class
-                                ),
+                (resultSet, rowNumber)
+                -> new MediaRecord(
+                        resultSet.getObject(
+                                "id",
+                                UUID.class
+                        ),
+                        resultSet.getString(
+                                "storage_key"
+                        ),
+                        resultSet.getString(
+                                "original_filename"
+                        ),
+                        resultSet.getString(
+                                "content_type"
+                        ),
+                        MediaType.valueOf(
                                 resultSet.getString(
-                                        "storage_key"
-                                ),
-                                resultSet.getString(
-                                        "original_filename"
-                                ),
-                                resultSet.getString(
-                                        "content_type"
-                                ),
-                                MediaType.valueOf(
-                                        resultSet.getString(
-                                                "media_type"
-                                        )
-                                ),
-                                MediaStatus.valueOf(
-                                        resultSet.getString(
-                                                "status"
-                                        )
-                                ),
-                                resultSet.getLong(
-                                        "expected_size"
+                                        "media_type"
                                 )
                         ),
+                        MediaStatus.valueOf(
+                                resultSet.getString(
+                                        "status"
+                                )
+                        ),
+                        resultSet.getLong(
+                                "expected_size"
+                        )
+                ),
                 mediaId,
                 organizationId
         ).stream().findFirst().orElseThrow(
@@ -562,23 +600,19 @@ public class MediaService {
                 .toLowerCase(Locale.ROOT);
 
         return switch (normalized) {
-            case "image/jpeg",
-                 "image/png",
-                 "image/webp" ->
-                    MediaType.IMAGE;
+            case "image/jpeg", "image/png", "image/webp" ->
+                MediaType.IMAGE;
 
-            case "video/mp4",
-                 "video/webm",
-                 "video/quicktime" ->
-                    MediaType.VIDEO;
+            case "video/mp4", "video/webm", "video/quicktime" ->
+                MediaType.VIDEO;
 
             case "application/pdf" ->
-                    MediaType.DOCUMENT;
+                MediaType.DOCUMENT;
 
             default ->
-                    throw new BusinessRuleException(
-                            "This file type is not supported."
-                    );
+                throw new BusinessRuleException(
+                        "This file type is not supported."
+                );
         };
     }
 
@@ -588,19 +622,19 @@ public class MediaService {
     ) {
         long maximum = switch (mediaType) {
             case IMAGE ->
-                    properties.maximumImageSize();
+                properties.maximumImageSize();
 
             case VIDEO ->
-                    properties.maximumVideoSize();
+                properties.maximumVideoSize();
 
             case DOCUMENT ->
-                    properties.maximumDocumentSize();
+                properties.maximumDocumentSize();
         };
 
         if (size > maximum) {
             throw new BusinessRuleException(
                     "The selected file exceeds the "
-                            + "maximum allowed size."
+                    + "maximum allowed size."
             );
         }
     }
@@ -612,12 +646,12 @@ public class MediaService {
                 .trim()
                 .replace("\\", "/");
 
-        int separator =
-                normalized.lastIndexOf('/');
+        int separator
+                = normalized.lastIndexOf('/');
 
         if (separator >= 0) {
-            normalized =
-                    normalized.substring(separator + 1);
+            normalized
+                    = normalized.substring(separator + 1);
         }
 
         normalized = normalized.replaceAll(
@@ -697,6 +731,7 @@ public class MediaService {
             MediaType mediaType,
             MediaStatus status,
             long expectedSize
-    ) {
+            ) {
+
     }
 }

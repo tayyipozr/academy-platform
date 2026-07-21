@@ -3,10 +3,6 @@ package com.academy.platform.media;
 import java.util.List;
 import java.util.UUID;
 
-import com.academy.platform.authentication.AuthenticatedUser;
-
-import jakarta.validation.Valid;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,6 +14,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.academy.platform.authentication.AuthenticatedUser;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/media")
@@ -34,17 +34,12 @@ public class MediaController {
     @GetMapping
     @PreAuthorize("hasAuthority('media.read')")
     public List<MediaResponse> findMedia(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @RequestParam(required = false)
-            MediaType type,
-
-            @RequestParam(required = false)
-            MediaStatus status
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @RequestParam(required = false) MediaType type,
+            @RequestParam(required = false) MediaStatus status
     ) {
         return mediaService.findMediaFiles(
-                currentUser.organizationId(),
+                currentUser,
                 type,
                 status
         );
@@ -53,14 +48,11 @@ public class MediaController {
     @GetMapping("/{mediaId}")
     @PreAuthorize("hasAuthority('media.read')")
     public MediaResponse findMedia(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID mediaId
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID mediaId
     ) {
         return mediaService.findMedia(
-                currentUser.organizationId(),
+                currentUser,
                 mediaId
         );
     }
@@ -68,12 +60,9 @@ public class MediaController {
     @PostMapping("/uploads")
     @PreAuthorize("hasAuthority('media.upload')")
     public MediaUploadResponse createUpload(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
             @Valid
-            @RequestBody
-            CreateMediaUploadRequest request
+            @RequestBody CreateMediaUploadRequest request
     ) {
         return mediaService.createUpload(
                 currentUser,
@@ -84,11 +73,8 @@ public class MediaController {
     @PostMapping("/{mediaId}/complete")
     @PreAuthorize("hasAuthority('media.upload')")
     public MediaResponse completeUpload(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID mediaId
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID mediaId
     ) {
         return mediaService.completeUpload(
                 currentUser,
@@ -99,11 +85,8 @@ public class MediaController {
     @GetMapping("/{mediaId}/download")
     @PreAuthorize("hasAuthority('media.read')")
     public MediaDownloadResponse createDownloadUrl(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID mediaId
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID mediaId
     ) {
         return mediaService.createDownloadUrl(
                 currentUser,
@@ -114,11 +97,8 @@ public class MediaController {
     @DeleteMapping("/{mediaId}")
     @PreAuthorize("hasAuthority('media.delete')")
     public ResponseEntity<Void> deleteMedia(
-            @AuthenticationPrincipal
-            AuthenticatedUser currentUser,
-
-            @PathVariable
-            UUID mediaId
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @PathVariable UUID mediaId
     ) {
         mediaService.deleteMedia(
                 currentUser,

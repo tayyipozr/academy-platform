@@ -84,7 +84,8 @@ public class StandardRoleProvisioningService {
                 List.of(
                         "guardian.portal.read",
                         "guardian.linked-students.read",
-                        "guardian.reports.read"
+                        "guardian.reports.read",
+                        "media.read"
                 )
         );
     }
