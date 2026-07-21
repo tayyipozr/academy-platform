@@ -5,26 +5,18 @@ import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.UUID;
 
-import com.academy.platform.IntegrationTestSupport;
-import com.jayway.jsonpath.JsonPath;
-
-import jakarta.servlet.http.Cookie;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import static org.springframework.security.test.web.servlet.request
-        .SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request
-        .MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request
-        .MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request
-        .MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result
-        .MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result
-        .MockMvcResultMatchers.status;
+import com.academy.platform.IntegrationTestSupport;
+
+import jakarta.servlet.http.Cookie;
 
 class MediaLinkIntegrationTest
         extends IntegrationTestSupport {
@@ -33,42 +25,43 @@ class MediaLinkIntegrationTest
     void administratorCanLinkMediaToStudent()
             throws Exception {
 
-        Cookie administrator =
-                loginAsAdministrator();
+        Cookie administrator
+                = loginAsAdministrator();
 
-        UUID organizationId =
-                findOrganizationId();
+        UUID organizationId
+                = findOrganizationId();
 
-        UUID mediaId =
-                createAvailableMedia(
+        UUID mediaId
+                = createAvailableMedia(
                         organizationId,
                         findAdminUserId()
                 );
 
-        UUID studentId =
-                createStudent(organizationId);
+        UUID studentId
+                = createStudent(organizationId);
 
         mockMvc.perform(
-                        post(
-                                "/api/v1/media/{mediaId}/links",
-                                mediaId
+                post(
+                        "/api/v1/media/{mediaId}/links",
+                        mediaId
+                )
+                        .cookie(administrator)
+                        .with(csrf())
+                        .contentType(
+                                MediaType.APPLICATION_JSON
                         )
-                                .cookie(administrator)
-                                .with(csrf())
-                                .contentType(
-                                        MediaType.APPLICATION_JSON
-                                )
-                                .content("""
+                        .content("""
                                         {
                                           "targetType": "STUDENT",
                                           "targetId": "%s",
                                           "caption": "Profile photo",
+                                          "purpose": "INTERNAL",
                                           "coverMedia": true
                                         }
                                         """.formatted(
-                                        studentId
-                                ))
-                )
+                                studentId
+                        ))
+        )
                 .andExpect(status().isCreated())
                 .andExpect(
                         jsonPath("$.mediaId")
@@ -77,6 +70,10 @@ class MediaLinkIntegrationTest
                 .andExpect(
                         jsonPath("$.targetType")
                                 .value("STUDENT")
+                )
+                .andExpect(
+                        jsonPath("$.purpose")
+                                .value("INTERNAL")
                 )
                 .andExpect(
                         jsonPath("$.targetId")
@@ -90,13 +87,13 @@ class MediaLinkIntegrationTest
                 );
 
         mockMvc.perform(
-                        get(
-                                "/api/v1/media/targets/"
-                                        + "STUDENT/{studentId}",
-                                studentId
-                        )
-                                .cookie(administrator)
+                get(
+                        "/api/v1/media/targets/"
+                        + "STUDENT/{studentId}",
+                        studentId
                 )
+                        .cookie(administrator)
+        )
                 .andExpect(status().isOk())
                 .andExpect(
                         jsonPath("$.length()")
@@ -108,20 +105,20 @@ class MediaLinkIntegrationTest
     void duplicateMediaLinkIsRejected()
             throws Exception {
 
-        Cookie administrator =
-                loginAsAdministrator();
+        Cookie administrator
+                = loginAsAdministrator();
 
-        UUID organizationId =
-                findOrganizationId();
+        UUID organizationId
+                = findOrganizationId();
 
-        UUID mediaId =
-                createAvailableMedia(
+        UUID mediaId
+                = createAvailableMedia(
                         organizationId,
                         findAdminUserId()
                 );
 
-        UUID studentId =
-                createStudent(organizationId);
+        UUID studentId
+                = createStudent(organizationId);
 
         createStudentLink(
                 organizationId,
@@ -132,26 +129,27 @@ class MediaLinkIntegrationTest
         );
 
         mockMvc.perform(
-                        post(
-                                "/api/v1/media/{mediaId}/links",
-                                mediaId
+                post(
+                        "/api/v1/media/{mediaId}/links",
+                        mediaId
+                )
+                        .cookie(administrator)
+                        .with(csrf())
+                        .contentType(
+                                MediaType.APPLICATION_JSON
                         )
-                                .cookie(administrator)
-                                .with(csrf())
-                                .contentType(
-                                        MediaType.APPLICATION_JSON
-                                )
-                                .content("""
+                        .content("""
                                         {
                                           "targetType": "STUDENT",
                                           "targetId": "%s",
                                           "caption": null,
+                                          "purpose": "INTERNAL",
                                           "coverMedia": false
                                         }
                                         """.formatted(
-                                        studentId
-                                ))
-                )
+                                studentId
+                        ))
+        )
                 .andExpect(status().isConflict())
                 .andExpect(
                         jsonPath("$.code")
@@ -165,26 +163,26 @@ class MediaLinkIntegrationTest
     void secondCoverReplacesPreviousCover()
             throws Exception {
 
-        Cookie administrator =
-                loginAsAdministrator();
+        Cookie administrator
+                = loginAsAdministrator();
 
-        UUID organizationId =
-                findOrganizationId();
+        UUID organizationId
+                = findOrganizationId();
 
-        UUID adminUserId =
-                findAdminUserId();
+        UUID adminUserId
+                = findAdminUserId();
 
-        UUID studentId =
-                createStudent(organizationId);
+        UUID studentId
+                = createStudent(organizationId);
 
-        UUID firstMediaId =
-                createAvailableMedia(
+        UUID firstMediaId
+                = createAvailableMedia(
                         organizationId,
                         adminUserId
                 );
 
-        UUID secondMediaId =
-                createAvailableMedia(
+        UUID secondMediaId
+                = createAvailableMedia(
                         organizationId,
                         adminUserId
                 );
@@ -198,30 +196,31 @@ class MediaLinkIntegrationTest
         );
 
         mockMvc.perform(
-                        post(
-                                "/api/v1/media/{mediaId}/links",
-                                secondMediaId
+                post(
+                        "/api/v1/media/{mediaId}/links",
+                        secondMediaId
+                )
+                        .cookie(administrator)
+                        .with(csrf())
+                        .contentType(
+                                MediaType.APPLICATION_JSON
                         )
-                                .cookie(administrator)
-                                .with(csrf())
-                                .contentType(
-                                        MediaType.APPLICATION_JSON
-                                )
-                                .content("""
+                        .content("""
                                         {
                                           "targetType": "STUDENT",
                                           "targetId": "%s",
                                           "caption": "New cover",
+                                          "purpose": "INTERNAL",
                                           "coverMedia": true
                                         }
                                         """.formatted(
-                                        studentId
-                                ))
-                )
+                                studentId
+                        ))
+        )
                 .andExpect(status().isCreated());
 
-        Boolean previousCover =
-                jdbcTemplate.queryForObject(
+        Boolean previousCover
+                = jdbcTemplate.queryForObject(
                         """
                         SELECT cover_media
                         FROM media_links
@@ -240,23 +239,23 @@ class MediaLinkIntegrationTest
     void foreignStudentCannotBeLinked()
             throws Exception {
 
-        Cookie administrator =
-                loginAsAdministrator();
+        Cookie administrator
+                = loginAsAdministrator();
 
-        UUID localOrganizationId =
-                findOrganizationId();
+        UUID localOrganizationId
+                = findOrganizationId();
 
-        UUID mediaId =
-                createAvailableMedia(
+        UUID mediaId
+                = createAvailableMedia(
                         localOrganizationId,
                         findAdminUserId()
                 );
 
-        UUID foreignMembershipId =
-                createForeignMembership();
+        UUID foreignMembershipId
+                = createForeignMembership();
 
-        UUID foreignOrganizationId =
-                jdbcTemplate.queryForObject(
+        UUID foreignOrganizationId
+                = jdbcTemplate.queryForObject(
                         """
                         SELECT organization_id
                         FROM organization_memberships
@@ -266,32 +265,33 @@ class MediaLinkIntegrationTest
                         foreignMembershipId
                 );
 
-        UUID foreignStudentId =
-                createStudent(
+        UUID foreignStudentId
+                = createStudent(
                         foreignOrganizationId
                 );
 
         mockMvc.perform(
-                        post(
-                                "/api/v1/media/{mediaId}/links",
-                                mediaId
+                post(
+                        "/api/v1/media/{mediaId}/links",
+                        mediaId
+                )
+                        .cookie(administrator)
+                        .with(csrf())
+                        .contentType(
+                                MediaType.APPLICATION_JSON
                         )
-                                .cookie(administrator)
-                                .with(csrf())
-                                .contentType(
-                                        MediaType.APPLICATION_JSON
-                                )
-                                .content("""
+                        .content("""
                                         {
                                           "targetType": "STUDENT",
                                           "targetId": "%s",
                                           "caption": null,
+                                          "purpose": "INTERNAL",
                                           "coverMedia": false
                                         }
                                         """.formatted(
-                                        foreignStudentId
-                                ))
-                )
+                                foreignStudentId
+                        ))
+        )
                 .andExpect(status().isNotFound());
     }
 
@@ -299,20 +299,20 @@ class MediaLinkIntegrationTest
     void linkCanBeRemovedWithoutDeletingMedia()
             throws Exception {
 
-        Cookie administrator =
-                loginAsAdministrator();
+        Cookie administrator
+                = loginAsAdministrator();
 
-        UUID organizationId =
-                findOrganizationId();
+        UUID organizationId
+                = findOrganizationId();
 
-        UUID mediaId =
-                createAvailableMedia(
+        UUID mediaId
+                = createAvailableMedia(
                         organizationId,
                         findAdminUserId()
                 );
 
-        UUID studentId =
-                createStudent(organizationId);
+        UUID studentId
+                = createStudent(organizationId);
 
         UUID linkId = createStudentLink(
                 organizationId,
@@ -323,17 +323,17 @@ class MediaLinkIntegrationTest
         );
 
         mockMvc.perform(
-                        delete(
-                                "/api/v1/media/links/{linkId}",
-                                linkId
-                        )
-                                .cookie(administrator)
-                                .with(csrf())
+                delete(
+                        "/api/v1/media/links/{linkId}",
+                        linkId
                 )
+                        .cookie(administrator)
+                        .with(csrf())
+        )
                 .andExpect(status().isNoContent());
 
-        String mediaStatus =
-                jdbcTemplate.queryForObject(
+        String mediaStatus
+                = jdbcTemplate.queryForObject(
                         """
                         SELECT status
                         FROM media_files
@@ -354,8 +354,8 @@ class MediaLinkIntegrationTest
     ) {
         UUID mediaId = UUID.randomUUID();
 
-        OffsetDateTime now =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
         jdbcTemplate.update(
                 """
@@ -387,9 +387,9 @@ class MediaLinkIntegrationTest
                 mediaId,
                 organizationId,
                 organizationId
-                        + "/"
-                        + mediaId
-                        + "/test.jpg",
+                + "/"
+                + mediaId
+                + "/test.jpg",
                 uploaderId,
                 now,
                 now,

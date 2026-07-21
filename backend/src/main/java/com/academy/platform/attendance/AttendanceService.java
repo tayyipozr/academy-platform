@@ -65,66 +65,84 @@ public class AttendanceService {
                 """
                 INSERT INTO attendance_records
                 (
-                    id,
-                    organization_id,
-                    session_id,
-                    student_id,
-                    status,
-                    arrival_time,
-                    departure_time,
-                    note,
-                    recorded_by,
-                    recorded_at,
-                    created_at,
-                    updated_at,
-                    version
+                id,
+                organization_id,
+                session_id,
+                student_id,
+                status,
+                arrival_time,
+                departure_time,
+                note,
+                recorded_by,
+                recorded_at,
+                created_at,
+                updated_at,
+                version
                 )
                 SELECT
-                    gen_random_uuid(),
-                    ge.organization_id,
-                    ?,
-                    ge.student_id,
-                    'NOT_RECORDED',
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    NULL,
-                    ?,
-                    ?,
-                    0
+                gen_random_uuid(),
+                ls.organization_id,
+                ls.id,
+                ge.student_id,
+                'NOT_RECORDED',
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                ?,
+                ?,
+                0
 
-                FROM group_enrollments ge
+                FROM lesson_sessions ls
+
+                JOIN organizations o
+                ON o.id = ls.organization_id
+
+                JOIN group_enrollments ge
+                ON ge.organization_id =
+                ls.organization_id
+                AND ge.group_id = ls.group_id
 
                 JOIN students s
-                    ON s.id = ge.student_id
-                   AND s.organization_id =
-                       ge.organization_id
+                ON s.id = ge.student_id
+                AND s.organization_id =
+                ge.organization_id
 
-                WHERE ge.organization_id = ?
-                  AND ge.group_id = ?
-                  AND ge.enrolled_at <= ?
-                  AND (
-                      ge.ended_at IS NULL
-                      OR ge.ended_at >= ?
-                  )
-                  AND ge.status <> 'CANCELLED'
-                  AND s.status <> 'ARCHIVED'
+                WHERE ls.id = ?
+                AND ls.organization_id = ?
 
-                ON CONFLICT (
-                    organization_id,
-                    session_id,
-                    student_id
+                AND ge.status <> 'CANCELLED'
+
+                AND ge.enrolled_at <=
+                (
+                        ls.scheduled_start
+                        AT TIME ZONE o.timezone
+                )::DATE
+
+                AND (
+                ge.ended_at IS NULL
+                OR ge.ended_at >=
+                        (
+                        ls.scheduled_start
+                        AT TIME ZONE o.timezone
+                        )::DATE
+                )
+
+                AND s.status <> 'ARCHIVED'
+
+                ON CONFLICT
+                (
+                organization_id,
+                session_id,
+                student_id
                 )
                 DO NOTHING
                 """,
+                now,
+                now,
                 sessionId,
-                now,
-                now,
-                actor.organizationId(),
-                session.groupId(),
-                session.sessionDate(),
-                session.sessionDate()
+                actor.organizationId()
         );
 
         auditService.record(
@@ -305,10 +323,11 @@ public class AttendanceService {
             }
 
         }
-
         auditService.record(
                 actor,
-                "ATTENDANCE_SAVED",
+                openCorrectionId == null
+                        ? "ATTENDANCE_SAVED"
+                        : "CORRECTED_ATTENDANCE_SAVED",
                 "LESSON_SESSION",
                 sessionId,
                 request.records().size()
@@ -338,11 +357,11 @@ public class AttendanceService {
 
         Integer totalCount = jdbcTemplate.queryForObject(
                 """
-                SELECT COUNT(*)
-                FROM attendance_records
-                WHERE organization_id = ?
-                  AND session_id = ?
-                """,
+            SELECT COUNT(*)
+            FROM attendance_records
+            WHERE organization_id = ?
+              AND session_id = ?
+            """,
                 Integer.class,
                 actor.organizationId(),
                 sessionId
@@ -358,12 +377,12 @@ public class AttendanceService {
         Integer notRecordedCount
                 = jdbcTemplate.queryForObject(
                         """
-                        SELECT COUNT(*)
-                        FROM attendance_records
-                        WHERE organization_id = ?
-                          AND session_id = ?
-                          AND status = 'NOT_RECORDED'
-                        """,
+                    SELECT COUNT(*)
+                    FROM attendance_records
+                    WHERE organization_id = ?
+                      AND session_id = ?
+                      AND status = 'NOT_RECORDED'
+                    """,
                         Integer.class,
                         actor.organizationId(),
                         sessionId
@@ -378,21 +397,27 @@ public class AttendanceService {
             );
         }
 
+        UUID openCorrectionId
+                = correctionService.findOpenCorrectionId(
+                        actor.organizationId(),
+                        sessionId
+                );
+
         OffsetDateTime finalizedAt
                 = OffsetDateTime.now(ZoneOffset.UTC);
 
-        jdbcTemplate.update(
+        int updatedRows = jdbcTemplate.update(
                 """
-                UPDATE lesson_sessions
-                SET
-                    attendance_finalized_at = ?,
-                    attendance_finalized_by = ?,
-                    updated_at = ?,
-                    version = version + 1
-                WHERE id = ?
-                  AND organization_id = ?
-                  AND attendance_finalized_at IS NULL
-                """,
+            UPDATE lesson_sessions
+            SET
+                attendance_finalized_at = ?,
+                attendance_finalized_by = ?,
+                updated_at = ?,
+                version = version + 1
+            WHERE id = ?
+              AND organization_id = ?
+              AND attendance_finalized_at IS NULL
+            """,
                 finalizedAt,
                 actor.userId(),
                 finalizedAt,
@@ -400,18 +425,20 @@ public class AttendanceService {
                 actor.organizationId()
         );
 
-        correctionService.completeOpenCorrection(
-                actor.organizationId(),
-                sessionId,
-                actor.userId(),
-                finalizedAt
-        );
+        if (updatedRows == 0) {
+            throw new BusinessRuleException(
+                    "Attendance could not be finalized."
+            );
+        }
 
-        UUID openCorrectionId
-                = correctionService.findOpenCorrectionId(
-                        actor.organizationId(),
-                        sessionId
-                );
+        if (openCorrectionId != null) {
+            correctionService.completeOpenCorrection(
+                    actor.organizationId(),
+                    sessionId,
+                    actor.userId(),
+                    finalizedAt
+            );
+        }
 
         auditService.record(
                 actor,
@@ -435,9 +462,9 @@ public class AttendanceService {
     ) {
         String sql = """
                 SELECT
+                    ls.organization_id,
                     ls.id,
                     ls.group_id,
-                    ls.organization_id,
                     ag.code AS group_code,
                     ag.name AS group_name,
                     ls.title,
@@ -464,15 +491,15 @@ public class AttendanceService {
                 (resultSet, rowNumber)
                 -> new SessionRecord(
                         resultSet.getObject(
+                                "organization_id",
+                                UUID.class
+                        ),
+                        resultSet.getObject(
                                 "id",
                                 UUID.class
                         ),
                         resultSet.getObject(
                                 "group_id",
-                                UUID.class
-                        ),
-                        resultSet.getObject(
-                                "organization_id",
                                 UUID.class
                         ),
                         resultSet.getString(
@@ -669,6 +696,12 @@ public class AttendanceService {
             SessionRecord session,
             List<AttendanceRecordResponse> records
     ) {
+        OpenCorrectionRecord openCorrection
+                = findOpenCorrection(
+                        session.organizationId(),
+                        session.id()
+                );
+
         int recordedCount = (int) records.stream()
                 .filter(record
                         -> record.status()
@@ -700,12 +733,6 @@ public class AttendanceService {
                 records,
                 AttendanceStatus.EXCUSED
         );
-
-        AttendanceCorrectionService.OpenCorrectionSummary openCorrection
-                = correctionService.findOpenCorrection(
-                        session.organizationId(),
-                        session.id()
-                );
 
         return new SessionAttendanceResponse(
                 session.id(),
@@ -818,5 +845,43 @@ public class AttendanceService {
         LocalDate sessionDate() {
             return scheduledStart.toLocalDate();
         }
+    }
+
+    private OpenCorrectionRecord findOpenCorrection(
+            UUID organizationId,
+            UUID sessionId
+    ) {
+        return jdbcTemplate.query(
+                """
+            SELECT
+                id,
+                correction_reason
+            FROM attendance_correction_batches
+            WHERE organization_id = ?
+              AND session_id = ?
+              AND status = 'OPEN'
+            ORDER BY opened_at DESC
+            LIMIT 1
+            """,
+                (resultSet, rowNumber)
+                -> new OpenCorrectionRecord(
+                        resultSet.getObject(
+                                "id",
+                                UUID.class
+                        ),
+                        resultSet.getString(
+                                "correction_reason"
+                        )
+                ),
+                organizationId,
+                sessionId
+        ).stream().findFirst().orElse(null);
+    }
+
+    private record OpenCorrectionRecord(
+            UUID id,
+            String reason
+            ) {
+
     }
 }

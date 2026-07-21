@@ -78,43 +78,40 @@ public class MediaLinkService {
 
         jdbcTemplate.update(
                 """
-                INSERT INTO media_links
-                (
-                    id,
-                    organization_id,
-                    media_id,
-                    student_id,
-                    group_id,
-                    session_id,
-                    evaluation_id,
-                    cover_media,
-                    linked_by,
-                    created_at,
-                    updated_at,
-                    version,
-                    caption,
-                    purpose,
-                    cover_media,
-                )
-                VALUES (
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    0,
-                    ?,
-                    ?,
-                    ?,
-                )
-                """,
+        INSERT INTO media_links
+        (
+            id,
+            organization_id,
+            media_id,
+            student_id,
+            group_id,
+            session_id,
+            evaluation_id,
+            caption,
+            purpose,
+            cover_media,
+            linked_by,
+            created_at,
+            updated_at,
+            version
+        )
+        VALUES (
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            0
+        )
+        """,
                 linkId,
                 actor.organizationId(),
                 mediaId,

@@ -11,19 +11,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import com.academy.platform.authentication.AuthenticatedUser;
-import com.academy.platform.common.BusinessRuleException;
-import com.academy.platform.common.ResourceNotFoundException;
-
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.academy.platform.authentication.AuthenticatedUser;
+import com.academy.platform.common.BusinessRuleException;
+import com.academy.platform.common.ResourceNotFoundException;
+
 @Service
 public class EvaluationReportingService {
 
-    private static final BigDecimal ONE_HUNDRED =
-            new BigDecimal("100.00");
+    private static final BigDecimal ONE_HUNDRED
+            = new BigDecimal("100.00");
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -35,19 +35,19 @@ public class EvaluationReportingService {
 
     @Transactional(readOnly = true)
     public List<PublishedEvaluationResponse>
-    findPublishedEvaluations(
-            AuthenticatedUser actor,
-            UUID studentId,
-            UUID groupId,
-            LocalDate dateFrom,
-            LocalDate dateTo
-    ) {
+            findPublishedEvaluations(
+                    AuthenticatedUser actor,
+                    UUID studentId,
+                    UUID groupId,
+                    LocalDate dateFrom,
+                    LocalDate dateTo
+            ) {
         validateDateRange(dateFrom, dateTo);
 
         validateStudentAccess(actor, studentId);
 
-        List<PublishedEvaluationRecord> evaluations =
-                findPublishedEvaluationRecords(
+        List<PublishedEvaluationRecord> evaluations
+                = findPublishedEvaluationRecords(
                         actor.organizationId(),
                         studentId,
                         groupId,
@@ -56,24 +56,24 @@ public class EvaluationReportingService {
                 );
 
         return evaluations.stream()
-                .map(record ->
-                        createPublishedResponse(
-                                actor.organizationId(),
-                                record
-                        )
+                .map(record
+                        -> createPublishedResponse(
+                        actor.organizationId(),
+                        record
+                )
                 )
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public StudentDevelopmentSummaryResponse
-    findStudentDevelopment(
-            AuthenticatedUser actor,
-            UUID studentId,
-            UUID groupId,
-            LocalDate dateFrom,
-            LocalDate dateTo
-    ) {
+            findStudentDevelopment(
+                    AuthenticatedUser actor,
+                    UUID studentId,
+                    UUID groupId,
+                    LocalDate dateFrom,
+                    LocalDate dateTo
+            ) {
         validateDateRange(dateFrom, dateTo);
 
         StudentRecord student = findStudent(
@@ -103,8 +103,8 @@ public class EvaluationReportingService {
             );
         }
 
-        List<PublishedEvaluationRecord> evaluations =
-                findPublishedEvaluationRecords(
+        List<PublishedEvaluationRecord> evaluations
+                = findPublishedEvaluationRecords(
                         actor.organizationId(),
                         studentId,
                         group == null
@@ -114,65 +114,63 @@ public class EvaluationReportingService {
                         dateTo
                 );
 
-        List<EvaluationTrendPointResponse> trend =
-                evaluations.stream()
-                        .map(record ->
-                                new EvaluationTrendPointResponse(
-                                        record.id(),
-                                        record.evaluationDate(),
-                                        record.templateName(),
-                                        record.templateVersion(),
-                                        record.overallScore(),
-                                        normalizeScore(record)
-                                )
+        List<EvaluationTrendPointResponse> trend
+                = evaluations.stream()
+                        .map(record
+                                -> new EvaluationTrendPointResponse(
+                                record.id(),
+                                record.evaluationDate(),
+                                record.templateName(),
+                                record.templateVersion(),
+                                record.overallScore(),
+                                normalizeScore(record)
+                        )
                         )
                         .sorted(
                                 java.util.Comparator.comparing(
-                                        EvaluationTrendPointResponse
-                                                ::evaluationDate
+                                        EvaluationTrendPointResponse::evaluationDate
                                 )
                         )
                         .toList();
 
-        BigDecimal averageNormalized =
-                average(
+        BigDecimal averageNormalized
+                = average(
                         trend.stream()
                                 .map(
-                                    EvaluationTrendPointResponse
-                                            ::normalizedScore
+                                        EvaluationTrendPointResponse::normalizedScore
                                 )
                                 .toList()
                 );
 
-        BigDecimal latestNormalized =
-                trend.isEmpty()
-                        ? null
-                        : trend.get(
-                                trend.size() - 1
-                        ).normalizedScore();
+        BigDecimal latestNormalized
+                = trend.isEmpty()
+                ? null
+                : trend.get(
+                        trend.size() - 1
+                ).normalizedScore();
 
-        BigDecimal firstNormalized =
-                trend.isEmpty()
-                        ? null
-                        : trend.get(0)
+        BigDecimal firstNormalized
+                = trend.isEmpty()
+                ? null
+                : trend.get(0)
                         .normalizedScore();
 
-        BigDecimal scoreTrend =
-                latestNormalized == null
-                        || firstNormalized == null
+        BigDecimal scoreTrend
+                = latestNormalized == null
+                || firstNormalized == null
                         ? null
                         : latestNormalized
-                        .subtract(firstNormalized)
-                        .setScale(
-                                2,
-                                RoundingMode.HALF_UP
-                        );
+                                .subtract(firstNormalized)
+                                .setScale(
+                                        2,
+                                        RoundingMode.HALF_UP
+                                );
 
-        PassingSummary passing =
-                calculatePassingSummary(evaluations);
+        PassingSummary passing
+                = calculatePassingSummary(evaluations);
 
-        BigDecimal attendancePercentage =
-                findAttendancePercentage(
+        BigDecimal attendancePercentage
+                = findAttendancePercentage(
                         actor.organizationId(),
                         studentId,
                         group == null
@@ -182,17 +180,16 @@ public class EvaluationReportingService {
                         dateTo
                 );
 
-        BigDecimal curriculumCompletion =
-                group == null
+        BigDecimal curriculumCompletion
+                = group == null
                         ? null
                         : findGroupCurriculumCompletion(
                                 actor.organizationId(),
                                 group.id()
                         );
 
-        List<CriterionAverageResponse>
-                criterionAverages =
-                findCriterionAverages(
+        List<CriterionAverageResponse> criterionAverages
+                = findCriterionAverages(
                         actor.organizationId(),
                         studentId,
                         group == null
@@ -202,8 +199,8 @@ public class EvaluationReportingService {
                         dateTo
                 );
 
-        DevelopmentStatus developmentStatus =
-                calculateDevelopmentStatus(
+        DevelopmentStatus developmentStatus
+                = calculateDevelopmentStatus(
                         averageNormalized,
                         attendancePercentage
                 );
@@ -235,12 +232,12 @@ public class EvaluationReportingService {
 
     @Transactional(readOnly = true)
     public GroupPerformanceSummaryResponse
-    findGroupPerformance(
-            AuthenticatedUser actor,
-            UUID groupId,
-            LocalDate dateFrom,
-            LocalDate dateTo
-    ) {
+            findGroupPerformance(
+                    AuthenticatedUser actor,
+                    UUID groupId,
+                    LocalDate dateFrom,
+                    LocalDate dateTo
+            ) {
         validateDateRange(dateFrom, dateTo);
 
         GroupRecord group = findGroup(
@@ -255,49 +252,46 @@ public class EvaluationReportingService {
                 dateTo
         );
 
-        List<GroupEvaluationRecord> records =
-                findGroupEvaluationRecords(
+        List<GroupEvaluationRecord> records
+                = findGroupEvaluationRecords(
                         actor.organizationId(),
                         groupId,
                         dateFrom,
                         dateTo
                 );
 
-        Map<UUID, MutableStudentPerformance> students =
-                new LinkedHashMap<>();
+        Map<UUID, MutableStudentPerformance> students
+                = new LinkedHashMap<>();
 
         for (GroupEvaluationRecord record : records) {
             students.computeIfAbsent(
                     record.studentId(),
-                    ignored ->
-                            new MutableStudentPerformance(
-                                    record.studentId(),
-                                    record.studentNumber(),
-                                    record.firstName(),
-                                    record.lastName()
-                            )
+                    ignored
+                    -> new MutableStudentPerformance(
+                            record.studentId(),
+                            record.studentNumber(),
+                            record.firstName(),
+                            record.lastName()
+                    )
             ).add(
                     record.evaluationDate(),
                     record.normalizedScore()
             );
         }
 
-        List<GroupStudentPerformanceResponse>
-                studentResponses =
-                students.values()
+        List<GroupStudentPerformanceResponse> studentResponses
+                = students.values()
                         .stream()
                         .map(
-                                MutableStudentPerformance
-                                        ::toResponse
+                                MutableStudentPerformance::toResponse
                         )
                         .toList();
 
-        BigDecimal groupAverage =
-                average(
+        BigDecimal groupAverage
+                = average(
                         records.stream()
                                 .map(
-                                    GroupEvaluationRecord
-                                            ::normalizedScore
+                                        GroupEvaluationRecord::normalizedScore
                                 )
                                 .toList()
                 );
@@ -308,16 +302,15 @@ public class EvaluationReportingService {
                 )
                 .count();
 
-        int passingDenominator =
-                (int) records.stream()
+        int passingDenominator
+                = (int) records.stream()
                         .filter(
-                                GroupEvaluationRecord
-                                        ::hasPassingScore
+                                GroupEvaluationRecord::hasPassingScore
                         )
                         .count();
 
-        BigDecimal passingRate =
-                percentage(
+        BigDecimal passingRate
+                = percentage(
                         passingCount,
                         passingDenominator
                 );
@@ -343,13 +336,13 @@ public class EvaluationReportingService {
     }
 
     private List<PublishedEvaluationRecord>
-    findPublishedEvaluationRecords(
-            UUID organizationId,
-            UUID studentId,
-            UUID groupId,
-            LocalDate dateFrom,
-            LocalDate dateTo
-    ) {
+            findPublishedEvaluationRecords(
+                    UUID organizationId,
+                    UUID studentId,
+                    UUID groupId,
+                    LocalDate dateFrom,
+                    LocalDate dateTo
+            ) {
         StringBuilder sql = new StringBuilder(
                 """
                 SELECT
@@ -408,15 +401,19 @@ public class EvaluationReportingService {
                 """
         );
 
-        List<Object> parameters =
-                new ArrayList<>();
+        List<Object> parameters
+                = new ArrayList<>();
 
         parameters.add(organizationId);
         parameters.add(studentId);
 
         if (groupId != null) {
             sql.append(
-                    " AND se.group_id = ?"
+                    """
+
+             AND se.group_id = ?
+
+            """
             );
 
             parameters.add(groupId);
@@ -424,7 +421,11 @@ public class EvaluationReportingService {
 
         if (dateFrom != null) {
             sql.append(
-                    " AND se.evaluation_date >= ?"
+                    """
+
+             AND se.evaluation_date >= ?
+
+            """
             );
 
             parameters.add(dateFrom);
@@ -432,7 +433,11 @@ public class EvaluationReportingService {
 
         if (dateTo != null) {
             sql.append(
-                    " AND se.evaluation_date <= ?"
+                    """
+
+             AND se.evaluation_date <= ?
+
+            """
             );
 
             parameters.add(dateTo);
@@ -448,21 +453,21 @@ public class EvaluationReportingService {
 
         return jdbcTemplate.query(
                 sql.toString(),
-                (resultSet, rowNumber) ->
-                        mapPublishedEvaluationRecord(
-                                resultSet
-                        ),
+                (resultSet, rowNumber)
+                -> mapPublishedEvaluationRecord(
+                        resultSet
+                ),
                 parameters.toArray()
         );
     }
 
     private PublishedEvaluationResponse
-    createPublishedResponse(
-            UUID organizationId,
-            PublishedEvaluationRecord record
-    ) {
-        List<PublishedCriterionScoreResponse> scores =
-                jdbcTemplate.query(
+            createPublishedResponse(
+                    UUID organizationId,
+                    PublishedEvaluationRecord record
+            ) {
+        List<PublishedCriterionScoreResponse> scores
+                = jdbcTemplate.query(
                         """
                         SELECT
                             ses.criterion_id,
@@ -489,45 +494,45 @@ public class EvaluationReportingService {
 
                         ORDER BY ec.sequence_number
                         """,
-                        (resultSet, rowNumber) ->
-                                new PublishedCriterionScoreResponse(
-                                        resultSet.getObject(
-                                                "criterion_id",
-                                                UUID.class
-                                        ),
-                                        resultSet.getString(
-                                                "criterion_code"
-                                        ),
-                                        resultSet.getString(
-                                                "criterion_name"
-                                        ),
-                                        resultSet.getString(
-                                                "criterion_description"
-                                        ),
-                                        resultSet.getBigDecimal(
-                                                "weight_percentage"
-                                        ),
-                                        resultSet.getBigDecimal(
-                                                "score"
-                                        ),
-                                        resultSet.getBigDecimal(
-                                                "weighted_score"
-                                        ),
-                                        resultSet.getString(
-                                                "evaluator_comment"
-                                        )
+                        (resultSet, rowNumber)
+                        -> new PublishedCriterionScoreResponse(
+                                resultSet.getObject(
+                                        "criterion_id",
+                                        UUID.class
                                 ),
+                                resultSet.getString(
+                                        "criterion_code"
+                                ),
+                                resultSet.getString(
+                                        "criterion_name"
+                                ),
+                                resultSet.getString(
+                                        "criterion_description"
+                                ),
+                                resultSet.getBigDecimal(
+                                        "weight_percentage"
+                                ),
+                                resultSet.getBigDecimal(
+                                        "score"
+                                ),
+                                resultSet.getBigDecimal(
+                                        "weighted_score"
+                                ),
+                                resultSet.getString(
+                                        "evaluator_comment"
+                                )
+                        ),
                         organizationId,
                         record.id()
                 );
 
-        BigDecimal normalized =
-                normalizeScore(record);
+        BigDecimal normalized
+                = normalizeScore(record);
 
-        Boolean passed =
-                record.passingScore() == null
-                        ? null
-                        : record.overallScore()
+        Boolean passed
+                = record.passingScore() == null
+                ? null
+                : record.overallScore()
                         .compareTo(
                                 record.passingScore()
                         ) >= 0;
@@ -559,13 +564,13 @@ public class EvaluationReportingService {
     }
 
     private List<CriterionAverageResponse>
-    findCriterionAverages(
-            UUID organizationId,
-            UUID studentId,
-            UUID groupId,
-            LocalDate dateFrom,
-            LocalDate dateTo
-    ) {
+            findCriterionAverages(
+                    UUID organizationId,
+                    UUID studentId,
+                    UUID groupId,
+                    LocalDate dateFrom,
+                    LocalDate dateTo
+            ) {
         StringBuilder sql = new StringBuilder(
                 """
                 SELECT
@@ -617,15 +622,17 @@ public class EvaluationReportingService {
                 """
         );
 
-        List<Object> parameters =
-                new ArrayList<>();
+        List<Object> parameters
+                = new ArrayList<>();
 
         parameters.add(organizationId);
         parameters.add(studentId);
 
         if (groupId != null) {
             sql.append(
-                    " AND se.group_id = ?"
+                    """
+                    AND se.group_id = ?
+                    """
             );
 
             parameters.add(groupId);
@@ -633,7 +640,9 @@ public class EvaluationReportingService {
 
         if (dateFrom != null) {
             sql.append(
-                    " AND se.evaluation_date >= ?"
+                    """
+                     AND se.evaluation_date >= ?
+                     """
             );
 
             parameters.add(dateFrom);
@@ -641,7 +650,9 @@ public class EvaluationReportingService {
 
         if (dateTo != null) {
             sql.append(
-                    " AND se.evaluation_date <= ?"
+                    """ 
+            AND se.evaluation_date <= ?
+            """
             );
 
             parameters.add(dateTo);
@@ -666,53 +677,53 @@ public class EvaluationReportingService {
 
         return jdbcTemplate.query(
                 sql.toString(),
-                (resultSet, rowNumber) ->
-                        new CriterionAverageResponse(
-                                resultSet.getObject(
-                                        "template_id",
-                                        UUID.class
-                                ),
-                                resultSet.getString(
-                                        "template_name"
-                                ),
-                                resultSet.getObject(
-                                        "criterion_id",
-                                        UUID.class
-                                ),
-                                resultSet.getString(
-                                        "criterion_code"
-                                ),
-                                resultSet.getString(
-                                        "criterion_name"
-                                ),
+                (resultSet, rowNumber)
+                -> new CriterionAverageResponse(
+                        resultSet.getObject(
+                                "template_id",
+                                UUID.class
+                        ),
+                        resultSet.getString(
+                                "template_name"
+                        ),
+                        resultSet.getObject(
+                                "criterion_id",
+                                UUID.class
+                        ),
+                        resultSet.getString(
+                                "criterion_code"
+                        ),
+                        resultSet.getString(
+                                "criterion_name"
+                        ),
+                        resultSet.getBigDecimal(
+                                "weight_percentage"
+                        ),
+                        resultSet.getInt(
+                                "evaluation_count"
+                        ),
+                        scale(
                                 resultSet.getBigDecimal(
-                                        "weight_percentage"
-                                ),
-                                resultSet.getInt(
-                                        "evaluation_count"
-                                ),
-                                scale(
-                                        resultSet.getBigDecimal(
-                                                "average_score"
-                                        )
-                                ),
-                                scale(
-                                        resultSet.getBigDecimal(
-                                                "average_normalized_score"
-                                        )
+                                        "average_score"
                                 )
                         ),
+                        scale(
+                                resultSet.getBigDecimal(
+                                        "average_normalized_score"
+                                )
+                        )
+                ),
                 parameters.toArray()
         );
     }
 
     private List<GroupEvaluationRecord>
-    findGroupEvaluationRecords(
-            UUID organizationId,
-            UUID groupId,
-            LocalDate dateFrom,
-            LocalDate dateTo
-    ) {
+            findGroupEvaluationRecords(
+                    UUID organizationId,
+                    UUID groupId,
+                    LocalDate dateFrom,
+                    LocalDate dateTo
+            ) {
         StringBuilder sql = new StringBuilder(
                 """
                 SELECT
@@ -763,15 +774,17 @@ public class EvaluationReportingService {
                 """
         );
 
-        List<Object> parameters =
-                new ArrayList<>();
+        List<Object> parameters
+                = new ArrayList<>();
 
         parameters.add(organizationId);
         parameters.add(groupId);
 
         if (dateFrom != null) {
             sql.append(
-                    " AND se.evaluation_date >= ?"
+                    """
+                     AND se.evaluation_date >= ?
+                     """
             );
 
             parameters.add(dateFrom);
@@ -779,7 +792,9 @@ public class EvaluationReportingService {
 
         if (dateTo != null) {
             sql.append(
-                    " AND se.evaluation_date <= ?"
+                    """ 
+            AND se.evaluation_date <= ?
+                """
             );
 
             parameters.add(dateTo);
@@ -787,46 +802,45 @@ public class EvaluationReportingService {
 
         sql.append(
                 """
-                ORDER BY
-                    s.first_name,
+                     ORDER BY s.first_name,
                     s.last_name,
                     se.evaluation_date
-                """
+            """
         );
 
         return jdbcTemplate.query(
                 sql.toString(),
-                (resultSet, rowNumber) ->
-                        new GroupEvaluationRecord(
-                                resultSet.getObject(
-                                        "student_id",
-                                        UUID.class
-                                ),
-                                resultSet.getString(
-                                        "student_number"
-                                ),
-                                resultSet.getString(
-                                        "first_name"
-                                ),
-                                resultSet.getString(
-                                        "last_name"
-                                ),
-                                resultSet.getObject(
-                                        "evaluation_date",
-                                        LocalDate.class
-                                ),
-                                scale(
-                                        resultSet.getBigDecimal(
-                                                "normalized_score"
-                                        )
-                                ),
+                (resultSet, rowNumber)
+                -> new GroupEvaluationRecord(
+                        resultSet.getObject(
+                                "student_id",
+                                UUID.class
+                        ),
+                        resultSet.getString(
+                                "student_number"
+                        ),
+                        resultSet.getString(
+                                "first_name"
+                        ),
+                        resultSet.getString(
+                                "last_name"
+                        ),
+                        resultSet.getObject(
+                                "evaluation_date",
+                                LocalDate.class
+                        ),
+                        scale(
                                 resultSet.getBigDecimal(
-                                        "passing_score"
-                                ) != null,
-                                resultSet.getBoolean(
-                                        "passed"
+                                        "normalized_score"
                                 )
                         ),
+                        resultSet.getBigDecimal(
+                                "passing_score"
+                        ) != null,
+                        resultSet.getBoolean(
+                                "passed"
+                        )
+                ),
                 parameters.toArray()
         );
     }
@@ -840,19 +854,18 @@ public class EvaluationReportingService {
     ) {
         StringBuilder sql = new StringBuilder(
                 """
-                SELECT
-                    COUNT(*) FILTER (
-                        WHERE ar.status
-                            IN ('PRESENT', 'LATE')
+                SELECT COUNT
+            (*) FILTER(
+                    WHERE ar.status IN ('PRESENT'
+            , 'LATE')
                     ) AS attended_count,
-
-                    COUNT(*) FILTER (
-                        WHERE ar.status
-                            IN (
+                    COUNT
+            (*) FILTER(
+                    WHERE ar.status IN (
                                 'PRESENT',
                                 'LATE',
                                 'ABSENT'
-                            )
+            )
                     ) AS denominator
 
                 FROM attendance_records ar
@@ -867,18 +880,20 @@ public class EvaluationReportingService {
                   AND ls.attendance_finalized_at
                       IS NOT NULL
                   AND ar.status <> 'NOT_RECORDED'
-                """
+            """
         );
 
-        List<Object> parameters =
-                new ArrayList<>();
+        List<Object> parameters
+                = new ArrayList<>();
 
         parameters.add(organizationId);
         parameters.add(studentId);
 
         if (groupId != null) {
             sql.append(
-                    " AND ls.group_id = ?"
+                    """
+                     AND ls.group_id = ?
+                     """
             );
 
             parameters.add(groupId);
@@ -886,7 +901,9 @@ public class EvaluationReportingService {
 
         if (dateFrom != null) {
             sql.append(
-                    " AND ls.scheduled_start::DATE >= ?"
+                    """
+                     AND ls.scheduled_start::DATE >= ?
+                     """
             );
 
             parameters.add(dateFrom);
@@ -894,28 +911,34 @@ public class EvaluationReportingService {
 
         if (dateTo != null) {
             sql.append(
-                    " AND ls.scheduled_start::DATE <= ?"
+                    """
+                     AND ls.scheduled_start::DATE <= ?
+                     """
             );
 
             parameters.add(dateTo);
         }
 
-        AttendanceCount counts =
-                jdbcTemplate.query(
+        AttendanceCount counts
+                = jdbcTemplate.query(
                         sql.toString(),
-                        (resultSet, rowNumber) ->
-                                new AttendanceCount(
-                                        resultSet.getInt(
-                                                "attended_count"
-                                        ),
-                                        resultSet.getInt(
-                                                "denominator"
-                                        )
+                        (resultSet, rowNumber)
+                        -> new AttendanceCount(
+                                resultSet.getInt(
+                                        "attended_count"
                                 ),
+                                resultSet.getInt(
+                                        "denominator"
+                                )
+                        ),
                         parameters.toArray()
                 ).stream().findFirst().orElse(
                         new AttendanceCount(0, 0)
                 );
+
+        if (counts.denominator() == 0) {
+            return null;
+        }
 
         return percentage(
                 counts.attended(),
@@ -927,15 +950,15 @@ public class EvaluationReportingService {
             UUID organizationId,
             UUID groupId
     ) {
-        ProgressCount progress =
-                jdbcTemplate.query(
+        ProgressCount progress
+                = jdbcTemplate.query(
                         """
                         SELECT
                             COUNT(*) AS total_units,
 
                             COUNT(*) FILTER (
                                 WHERE gcup.status = 'COMPLETED'
-                            ) AS completed_units
+            ) AS completed_units
 
                         FROM group_curriculum_assignments gca
 
@@ -947,16 +970,16 @@ public class EvaluationReportingService {
                         WHERE gca.organization_id = ?
                           AND gca.group_id = ?
                           AND gca.status = 'ACTIVE'
-                        """,
-                        (resultSet, rowNumber) ->
-                                new ProgressCount(
-                                        resultSet.getInt(
-                                                "total_units"
-                                        ),
-                                        resultSet.getInt(
-                                                "completed_units"
-                                        )
+            """,
+                        (resultSet, rowNumber)
+                        -> new ProgressCount(
+                                resultSet.getInt(
+                                        "total_units"
                                 ),
+                                resultSet.getInt(
+                                        "completed_units"
+                                )
+                        ),
                         organizationId,
                         groupId
                 ).stream().findFirst().orElse(
@@ -973,15 +996,15 @@ public class EvaluationReportingService {
             List<PublishedEvaluationRecord> evaluations
     ) {
         int denominator = (int) evaluations.stream()
-                .filter(record ->
-                        record.passingScore() != null
+                .filter(record
+                        -> record.passingScore() != null
                 )
                 .count();
 
         int passed = (int) evaluations.stream()
-                .filter(record ->
-                        record.passingScore() != null
-                        && record.overallScore()
+                .filter(record
+                        -> record.passingScore() != null
+                && record.overallScore()
                         .compareTo(
                                 record.passingScore()
                         ) >= 0
@@ -996,25 +1019,23 @@ public class EvaluationReportingService {
     }
 
     private DevelopmentStatus
-    calculateDevelopmentStatus(
-            BigDecimal evaluationAverage,
-            BigDecimal attendancePercentage
-    ) {
+            calculateDevelopmentStatus(
+                    BigDecimal evaluationAverage,
+                    BigDecimal attendancePercentage
+            ) {
         if (evaluationAverage == null) {
             return DevelopmentStatus.NO_DATA;
         }
 
-        BigDecimal effectiveScore =
-                evaluationAverage;
+        BigDecimal effectiveScore
+                = evaluationAverage;
 
-        if (
-                attendancePercentage != null
+        if (attendancePercentage != null
                 && attendancePercentage.compareTo(
                         new BigDecimal("60.00")
-                ) < 0
-        ) {
-            effectiveScore =
-                    effectiveScore.subtract(
+                ) < 0) {
+            effectiveScore
+                    = effectiveScore.subtract(
                             new BigDecimal("10.00")
                     );
         }
@@ -1037,8 +1058,7 @@ public class EvaluationReportingService {
             return DevelopmentStatus.ON_TRACK;
         }
 
-        return DevelopmentStatus
-                .EXCEEDING_EXPECTATIONS;
+        return DevelopmentStatus.EXCEEDING_EXPECTATIONS;
     }
 
     private void validateStudentAccess(
@@ -1172,11 +1192,11 @@ public class EvaluationReportingService {
                   AND membership_id = ?
                   AND employment_status = 'ACTIVE'
                 """,
-                (resultSet, rowNumber) ->
-                        resultSet.getObject(
-                                "id",
-                                UUID.class
-                        ),
+                (resultSet, rowNumber)
+                -> resultSet.getObject(
+                        "id",
+                        UUID.class
+                ),
                 actor.organizationId(),
                 actor.membershipId()
         ).stream().findFirst().orElseThrow(
@@ -1202,22 +1222,22 @@ public class EvaluationReportingService {
                   AND organization_id = ?
                   AND status <> 'ARCHIVED'
                 """,
-                (resultSet, rowNumber) ->
-                        new StudentRecord(
-                                resultSet.getObject(
-                                        "id",
-                                        UUID.class
-                                ),
-                                resultSet.getString(
-                                        "student_number"
-                                ),
-                                resultSet.getString(
-                                        "first_name"
-                                ),
-                                resultSet.getString(
-                                        "last_name"
-                                )
+                (resultSet, rowNumber)
+                -> new StudentRecord(
+                        resultSet.getObject(
+                                "id",
+                                UUID.class
                         ),
+                        resultSet.getString(
+                                "student_number"
+                        ),
+                        resultSet.getString(
+                                "first_name"
+                        ),
+                        resultSet.getString(
+                                "last_name"
+                        )
+                ),
                 studentId,
                 organizationId
         ).stream().findFirst().orElseThrow(
@@ -1257,29 +1277,29 @@ public class EvaluationReportingService {
                 WHERE ag.id = ?
                   AND ag.organization_id = ?
                 """,
-                (resultSet, rowNumber) ->
-                        new GroupRecord(
-                                resultSet.getObject(
-                                        "id",
-                                        UUID.class
-                                ),
-                                resultSet.getString("code"),
-                                resultSet.getString("name"),
-                                resultSet.getObject(
-                                        "program_id",
-                                        UUID.class
-                                ),
-                                resultSet.getString(
-                                        "program_name"
-                                ),
-                                resultSet.getObject(
-                                        "term_id",
-                                        UUID.class
-                                ),
-                                resultSet.getString(
-                                        "term_name"
-                                )
+                (resultSet, rowNumber)
+                -> new GroupRecord(
+                        resultSet.getObject(
+                                "id",
+                                UUID.class
                         ),
+                        resultSet.getString("code"),
+                        resultSet.getString("name"),
+                        resultSet.getObject(
+                                "program_id",
+                                UUID.class
+                        ),
+                        resultSet.getString(
+                                "program_name"
+                        ),
+                        resultSet.getObject(
+                                "term_id",
+                                UUID.class
+                        ),
+                        resultSet.getString(
+                                "term_name"
+                        )
+                ),
                 groupId,
                 organizationId
         ).stream().findFirst().orElseThrow(
@@ -1339,29 +1359,29 @@ public class EvaluationReportingService {
                 ORDER BY ge.enrolled_at DESC
                 LIMIT 1
                 """,
-                (resultSet, rowNumber) ->
-                        new GroupRecord(
-                                resultSet.getObject(
-                                        "id",
-                                        UUID.class
-                                ),
-                                resultSet.getString("code"),
-                                resultSet.getString("name"),
-                                resultSet.getObject(
-                                        "program_id",
-                                        UUID.class
-                                ),
-                                resultSet.getString(
-                                        "program_name"
-                                ),
-                                resultSet.getObject(
-                                        "term_id",
-                                        UUID.class
-                                ),
-                                resultSet.getString(
-                                        "term_name"
-                                )
+                (resultSet, rowNumber)
+                -> new GroupRecord(
+                        resultSet.getObject(
+                                "id",
+                                UUID.class
                         ),
+                        resultSet.getString("code"),
+                        resultSet.getString("name"),
+                        resultSet.getObject(
+                                "program_id",
+                                UUID.class
+                        ),
+                        resultSet.getString(
+                                "program_name"
+                        ),
+                        resultSet.getObject(
+                                "term_id",
+                                UUID.class
+                        ),
+                        resultSet.getString(
+                                "term_name"
+                        )
+                ),
                 organizationId,
                 studentId,
                 dateTo,
@@ -1401,8 +1421,8 @@ public class EvaluationReportingService {
     private BigDecimal normalizeScore(
             PublishedEvaluationRecord record
     ) {
-        BigDecimal range =
-                record.maximumScore()
+        BigDecimal range
+                = record.maximumScore()
                         .subtract(
                                 record.minimumScore()
                         );
@@ -1428,8 +1448,8 @@ public class EvaluationReportingService {
     private BigDecimal average(
             List<BigDecimal> values
     ) {
-        List<BigDecimal> nonNullValues =
-                values.stream()
+        List<BigDecimal> nonNullValues
+                = values.stream()
                         .filter(
                                 java.util.Objects::nonNull
                         )
@@ -1439,8 +1459,8 @@ public class EvaluationReportingService {
             return null;
         }
 
-        BigDecimal total =
-                nonNullValues.stream()
+        BigDecimal total
+                = nonNullValues.stream()
                         .reduce(
                                 BigDecimal.ZERO,
                                 BigDecimal::add
@@ -1512,9 +1532,9 @@ public class EvaluationReportingService {
     }
 
     private PublishedEvaluationRecord
-    mapPublishedEvaluationRecord(
-            ResultSet resultSet
-    ) throws SQLException {
+            mapPublishedEvaluationRecord(
+                    ResultSet resultSet
+            ) throws SQLException {
         return new PublishedEvaluationRecord(
                 resultSet.getObject("id", UUID.class),
                 resultSet.getObject(
@@ -1589,7 +1609,8 @@ public class EvaluationReportingService {
             String evaluatorComment,
             String evaluatorName,
             java.time.OffsetDateTime publishedAt
-    ) {
+            ) {
+
     }
 
     private record StudentRecord(
@@ -1597,7 +1618,8 @@ public class EvaluationReportingService {
             String studentNumber,
             String firstName,
             String lastName
-    ) {
+            ) {
+
     }
 
     private record GroupRecord(
@@ -1608,26 +1630,30 @@ public class EvaluationReportingService {
             String programName,
             UUID termId,
             String termName
-    ) {
+            ) {
+
     }
 
     private record PassingSummary(
             int passed,
             int denominator,
             BigDecimal percentage
-    ) {
+            ) {
+
     }
 
     private record AttendanceCount(
             int attended,
             int denominator
-    ) {
+            ) {
+
     }
 
     private record ProgressCount(
             int total,
             int completed
-    ) {
+            ) {
+
     }
 
     private record GroupEvaluationRecord(
@@ -1639,7 +1665,8 @@ public class EvaluationReportingService {
             BigDecimal normalizedScore,
             boolean hasPassingScore,
             boolean passed
-    ) {
+            ) {
+
     }
 
     private static final class MutableStudentPerformance {
@@ -1649,8 +1676,8 @@ public class EvaluationReportingService {
         private final String firstName;
         private final String lastName;
 
-        private final List<ScorePoint> scores =
-                new ArrayList<>();
+        private final List<ScorePoint> scores
+                = new ArrayList<>();
 
         private MutableStudentPerformance(
                 UUID studentId,
@@ -1674,15 +1701,15 @@ public class EvaluationReportingService {
         }
 
         private GroupStudentPerformanceResponse
-        toResponse() {
+                toResponse() {
             scores.sort(
                     java.util.Comparator.comparing(
                             ScorePoint::date
                     )
             );
 
-            List<BigDecimal> values =
-                    scores.stream()
+            List<BigDecimal> values
+                    = scores.stream()
                             .map(ScorePoint::score)
                             .toList();
 
@@ -1698,14 +1725,14 @@ public class EvaluationReportingService {
                     ? null
                     : scores.get(0).score();
 
-            BigDecimal trend =
-                    latest == null || first == null
+            BigDecimal trend
+                    = latest == null || first == null
                             ? null
                             : latest.subtract(first)
-                            .setScale(
-                                    2,
-                                    RoundingMode.HALF_UP
-                            );
+                                    .setScale(
+                                            2,
+                                            RoundingMode.HALF_UP
+                                    );
 
             return new GroupStudentPerformanceResponse(
                     studentId,
@@ -1743,7 +1770,7 @@ public class EvaluationReportingService {
         }
 
         private static DevelopmentStatus
-        statusForAverage(BigDecimal average) {
+                statusForAverage(BigDecimal average) {
             if (average == null) {
                 return DevelopmentStatus.NO_DATA;
             }
@@ -1766,14 +1793,14 @@ public class EvaluationReportingService {
                 return DevelopmentStatus.ON_TRACK;
             }
 
-            return DevelopmentStatus
-                    .EXCEEDING_EXPECTATIONS;
+            return DevelopmentStatus.EXCEEDING_EXPECTATIONS;
         }
 
         private record ScorePoint(
                 LocalDate date,
                 BigDecimal score
-        ) {
+                ) {
+
         }
     }
 }

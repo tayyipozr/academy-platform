@@ -359,14 +359,16 @@ public class AttendanceCorrectionService {
     ) {
         return jdbcTemplate.query(
                 """
-                SELECT
-                    id,
-                    correction_reason
-                FROM attendance_correction_batches
-                WHERE organization_id = ?
-                  AND session_id = ?
-                  AND status = 'OPEN'
-                """,
+            SELECT
+                id,
+                correction_reason
+            FROM attendance_correction_batches
+            WHERE organization_id = ?
+              AND session_id = ?
+              AND status = 'OPEN'
+            ORDER BY opened_at DESC
+            LIMIT 1
+            """,
                 (resultSet, rowNumber)
                 -> new OpenCorrectionSummary(
                         resultSet.getObject(

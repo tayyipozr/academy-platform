@@ -5,25 +5,18 @@ import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.UUID;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.academy.platform.IntegrationTestSupport;
 
 import jakarta.servlet.http.Cookie;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.http.MediaType;
-
-import static org.springframework.security.test.web.servlet.request
-        .SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request
-        .MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request
-        .MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request
-        .MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result
-        .MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result
-        .MockMvcResultMatchers.status;
 
 class AttendanceCorrectionIntegrationTest
         extends IntegrationTestSupport {
@@ -32,29 +25,29 @@ class AttendanceCorrectionIntegrationTest
     void finalizedAttendanceCanBeCorrectedWithHistory()
             throws Exception {
 
-        Cookie administrator =
-                loginAsAdministrator();
+        Cookie administrator
+                = loginAsAdministrator();
 
-        TestStructure structure =
-                createFinalizedAttendance();
+        TestStructure structure
+                = createFinalizedAttendance();
 
         mockMvc.perform(
-                        post(
-                                "/api/v1/sessions/{sessionId}"
-                                        + "/attendance/corrections/open",
-                                structure.sessionId()
+                post(
+                        "/api/v1/sessions/{sessionId}"
+                        + "/attendance/corrections/open",
+                        structure.sessionId()
+                )
+                        .cookie(administrator)
+                        .with(csrf())
+                        .contentType(
+                                MediaType.APPLICATION_JSON
                         )
-                                .cookie(administrator)
-                                .with(csrf())
-                                .contentType(
-                                        MediaType.APPLICATION_JSON
-                                )
-                                .content("""
+                        .content("""
                                         {
                                           "reason": "Guardian confirmed attendance."
                                         }
                                         """)
-                )
+        )
                 .andExpect(status().isOk())
                 .andExpect(
                         jsonPath("$.status")
@@ -62,16 +55,16 @@ class AttendanceCorrectionIntegrationTest
                 );
 
         mockMvc.perform(
-                        put(
-                                "/api/v1/sessions/{sessionId}/attendance",
-                                structure.sessionId()
+                put(
+                        "/api/v1/sessions/{sessionId}/attendance",
+                        structure.sessionId()
+                )
+                        .cookie(administrator)
+                        .with(csrf())
+                        .contentType(
+                                MediaType.APPLICATION_JSON
                         )
-                                .cookie(administrator)
-                                .with(csrf())
-                                .contentType(
-                                        MediaType.APPLICATION_JSON
-                                )
-                                .content("""
+                        .content("""
                                         {
                                           "records": [
                                             {
@@ -84,9 +77,9 @@ class AttendanceCorrectionIntegrationTest
                                           ]
                                         }
                                         """.formatted(
-                                        structure.studentId()
-                                ))
-                )
+                                structure.studentId()
+                        ))
+        )
                 .andExpect(status().isOk())
                 .andExpect(
                         jsonPath("$.correctionOpen")
@@ -94,14 +87,14 @@ class AttendanceCorrectionIntegrationTest
                 );
 
         mockMvc.perform(
-                        post(
-                                "/api/v1/sessions/{sessionId}"
-                                        + "/attendance/finalize",
-                                structure.sessionId()
-                        )
-                                .cookie(administrator)
-                                .with(csrf())
+                post(
+                        "/api/v1/sessions/{sessionId}"
+                        + "/attendance/finalize",
+                        structure.sessionId()
                 )
+                        .cookie(administrator)
+                        .with(csrf())
+        )
                 .andExpect(status().isOk())
                 .andExpect(
                         jsonPath("$.finalized")
@@ -113,13 +106,13 @@ class AttendanceCorrectionIntegrationTest
                 );
 
         mockMvc.perform(
-                        get(
-                                "/api/v1/sessions/{sessionId}"
-                                        + "/attendance/corrections",
-                                structure.sessionId()
-                        )
-                                .cookie(administrator)
+                get(
+                        "/api/v1/sessions/{sessionId}"
+                        + "/attendance/corrections",
+                        structure.sessionId()
                 )
+                        .cookie(administrator)
+        )
                 .andExpect(status().isOk())
                 .andExpect(
                         jsonPath("$[0].status")
@@ -145,11 +138,11 @@ class AttendanceCorrectionIntegrationTest
     void correctionRequiresFinalizedAttendance()
             throws Exception {
 
-        Cookie administrator =
-                loginAsAdministrator();
+        Cookie administrator
+                = loginAsAdministrator();
 
-        TestStructure structure =
-                createFinalizedAttendance();
+        TestStructure structure
+                = createFinalizedAttendance();
 
         jdbcTemplate.update(
                 """
@@ -163,22 +156,22 @@ class AttendanceCorrectionIntegrationTest
         );
 
         mockMvc.perform(
-                        post(
-                                "/api/v1/sessions/{sessionId}"
-                                        + "/attendance/corrections/open",
-                                structure.sessionId()
+                post(
+                        "/api/v1/sessions/{sessionId}"
+                        + "/attendance/corrections/open",
+                        structure.sessionId()
+                )
+                        .cookie(administrator)
+                        .with(csrf())
+                        .contentType(
+                                MediaType.APPLICATION_JSON
                         )
-                                .cookie(administrator)
-                                .with(csrf())
-                                .contentType(
-                                        MediaType.APPLICATION_JSON
-                                )
-                                .content("""
+                        .content("""
                                         {
                                           "reason": "Invalid request"
                                         }
                                         """)
-                )
+        )
                 .andExpect(
                         status().isUnprocessableEntity()
                 );
@@ -188,29 +181,29 @@ class AttendanceCorrectionIntegrationTest
     void correctionReasonIsRequired()
             throws Exception {
 
-        Cookie administrator =
-                loginAsAdministrator();
+        Cookie administrator
+                = loginAsAdministrator();
 
-        TestStructure structure =
-                createFinalizedAttendance();
+        TestStructure structure
+                = createFinalizedAttendance();
 
         mockMvc.perform(
-                        post(
-                                "/api/v1/sessions/{sessionId}"
-                                        + "/attendance/corrections/open",
-                                structure.sessionId()
+                post(
+                        "/api/v1/sessions/{sessionId}"
+                        + "/attendance/corrections/open",
+                        structure.sessionId()
+                )
+                        .cookie(administrator)
+                        .with(csrf())
+                        .contentType(
+                                MediaType.APPLICATION_JSON
                         )
-                                .cookie(administrator)
-                                .with(csrf())
-                                .contentType(
-                                        MediaType.APPLICATION_JSON
-                                )
-                                .content("""
+                        .content("""
                                         {
                                           "reason": ""
                                         }
                                         """)
-                )
+        )
                 .andExpect(status().isBadRequest())
                 .andExpect(
                         jsonPath("$.code")
@@ -219,19 +212,19 @@ class AttendanceCorrectionIntegrationTest
     }
 
     private TestStructure createFinalizedAttendance() {
-        UUID organizationId =
-                findOrganizationId();
+        UUID organizationId
+                = findOrganizationId();
 
-        UUID adminUserId =
-                findAdminUserId();
+        UUID adminUserId
+                = findAdminUserId();
 
         String suffix = UUID.randomUUID()
                 .toString()
                 .substring(0, 8)
                 .toUpperCase(Locale.ROOT);
 
-        OffsetDateTime now =
-                OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now
+                = OffsetDateTime.now(ZoneOffset.UTC);
 
         UUID programId = UUID.randomUUID();
         UUID termId = UUID.randomUUID();
@@ -410,6 +403,7 @@ class AttendanceCorrectionIntegrationTest
     private record TestStructure(
             UUID sessionId,
             UUID studentId
-    ) {
+            ) {
+
     }
 }

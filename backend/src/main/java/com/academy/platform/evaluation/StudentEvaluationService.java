@@ -126,7 +126,9 @@ public class StudentEvaluationService {
 
         if (studentId != null) {
             sql.append(
-                    " AND se.student_id = ?"
+                    """
+                     AND se.student_id = ?
+                     """
             );
 
             parameters.add(studentId);
@@ -134,7 +136,9 @@ public class StudentEvaluationService {
 
         if (groupId != null) {
             sql.append(
-                    " AND se.group_id = ?"
+                    """
+                     AND se.group_id = ?
+                     """
             );
 
             parameters.add(groupId);
@@ -142,7 +146,9 @@ public class StudentEvaluationService {
 
         if (sessionId != null) {
             sql.append(
-                    " AND se.session_id = ?"
+                    """
+                     AND se.session_id = ?
+                     """
             );
 
             parameters.add(sessionId);
@@ -150,7 +156,9 @@ public class StudentEvaluationService {
 
         if (status != null) {
             sql.append(
-                    " AND se.status = ?"
+                    """
+                     AND se.status = ?
+                     """
             );
 
             parameters.add(status.name());
@@ -158,7 +166,9 @@ public class StudentEvaluationService {
 
         if (dateFrom != null) {
             sql.append(
-                    " AND se.evaluation_date >= ?"
+                    """
+                     AND se.evaluation_date >= ?
+                     """
             );
 
             parameters.add(dateFrom);
@@ -166,7 +176,9 @@ public class StudentEvaluationService {
 
         if (dateTo != null) {
             sql.append(
-                    " AND se.evaluation_date <= ?"
+                    """
+                     AND se.evaluation_date <= ?
+                     """
             );
 
             parameters.add(dateTo);
