@@ -1,13 +1,20 @@
-import type { NextConfig } from "next";
+import type {
+  NextConfig,
+} from "next";
 
-const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8080";
+const backendUrl =
+  process.env.BACKEND_URL ??
+  "http://localhost:8080";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+
   async rewrites() {
     return [
       {
         source: "/backend/:path*",
-        destination: `${backendUrl}/:path*`,
+        destination:
+          `${backendUrl}/:path*`,
       },
     ];
   },

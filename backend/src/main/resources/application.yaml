@@ -73,13 +73,17 @@ app:
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
     admin-first-name: ${BOOTSTRAP_ADMIN_FIRST_NAME:System}
     admin-last-name: ${BOOTSTRAP_ADMIN_LAST_NAME:Administrator}
-    
+
   media:
-    endpoint: ${MEDIA_ENDPOINT:http://localhost:9000}
+    internal-endpoint: ${MEDIA_INTERNAL_ENDPOINT:http://localhost:9000}
+    public-endpoint: ${MEDIA_PUBLIC_ENDPOINT:http://localhost:9000}
+
     region: ${MEDIA_REGION:us-east-1}
     bucket: ${MEDIA_BUCKET:academy-media}
+
     access-key: ${MEDIA_ACCESS_KEY:academy_minio}
     secret-key: ${MEDIA_SECRET_KEY:change-this-local-minio-password}
+
     path-style-access: ${MEDIA_PATH_STYLE:true}
     auto-create-bucket: ${MEDIA_AUTO_CREATE_BUCKET:true}
 

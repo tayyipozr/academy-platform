@@ -1,10 +1,10 @@
 package com.academy.platform.configuration;
 
-import com.academy.platform.media.MediaStorageProperties;
-
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import com.academy.platform.media.MediaStorageProperties;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -37,12 +37,18 @@ public class MediaStorageConfiguration {
             S3Configuration s3Configuration
     ) {
         return S3Client.builder()
-                .endpointOverride(properties.endpoint())
-                .region(Region.of(properties.region()))
+                .endpointOverride(
+                        properties.internalEndpoint()
+                )
+                .region(
+                        Region.of(properties.region())
+                )
                 .credentialsProvider(
                         credentialsProvider(properties)
                 )
-                .serviceConfiguration(s3Configuration)
+                .serviceConfiguration(
+                        s3Configuration
+                )
                 .httpClientBuilder(
                         UrlConnectionHttpClient.builder()
                 )
@@ -55,19 +61,25 @@ public class MediaStorageConfiguration {
             S3Configuration s3Configuration
     ) {
         return S3Presigner.builder()
-                .endpointOverride(properties.endpoint())
-                .region(Region.of(properties.region()))
+                .endpointOverride(
+                        properties.publicEndpoint()
+                )
+                .region(
+                        Region.of(properties.region())
+                )
                 .credentialsProvider(
                         credentialsProvider(properties)
                 )
-                .serviceConfiguration(s3Configuration)
+                .serviceConfiguration(
+                        s3Configuration
+                )
                 .build();
     }
 
     private StaticCredentialsProvider
-    credentialsProvider(
-            MediaStorageProperties properties
-    ) {
+            credentialsProvider(
+                    MediaStorageProperties properties
+            ) {
         return StaticCredentialsProvider.create(
                 AwsBasicCredentials.create(
                         properties.accessKey(),

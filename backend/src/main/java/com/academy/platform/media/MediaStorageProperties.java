@@ -7,7 +7,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app.media")
 public record MediaStorageProperties(
-        URI endpoint,
+        URI internalEndpoint,
+        URI publicEndpoint,
         String region,
         String bucket,
         String accessKey,
@@ -19,5 +20,6 @@ public record MediaStorageProperties(
         long maximumImageSize,
         long maximumVideoSize,
         long maximumDocumentSize
-) {
+        ) {
+
 }
