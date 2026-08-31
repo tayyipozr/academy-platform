@@ -43,6 +43,7 @@ import { getPrograms } from "@/features/programs/api";
 
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
+import { useLocalization } from "@/features/localization/use-localization";
 
 export default function EvaluationTemplatesPage() {
   const queryClient = useQueryClient();
@@ -114,6 +115,13 @@ export default function EvaluationTemplatesPage() {
     mutationFn: createEvaluationTemplate,
   });
 
+  const {
+    dictionary,
+  } = useLocalization();
+
+  const t = dictionary.pages.evaluationTemplates;
+  const common = dictionary.common;
+
   const updateMutation = useMutation({
     mutationFn: ({
       templateId,
@@ -157,24 +165,24 @@ export default function EvaluationTemplatesPage() {
     values: EvaluationTemplateFormValues,
   ) {
     const request: SaveEvaluationTemplateRequest =
-      {
-        programId: values.programId,
-        code: values.code,
-        name: values.name,
-        description:
-          values.description || null,
-        versionLabel: values.versionLabel,
-        minimumScore: Number(
-          values.minimumScore,
-        ),
-        maximumScore: Number(
-          values.maximumScore,
-        ),
-        passingScore:
-          values.passingScore === ""
-            ? null
-            : Number(values.passingScore),
-      };
+    {
+      programId: values.programId,
+      code: values.code,
+      name: values.name,
+      description:
+        values.description || null,
+      versionLabel: values.versionLabel,
+      minimumScore: Number(
+        values.minimumScore,
+      ),
+      maximumScore: Number(
+        values.maximumScore,
+      ),
+      passingScore:
+        values.passingScore === ""
+          ? null
+          : Number(values.passingScore),
+    };
 
     setFormError(null);
 
@@ -240,20 +248,18 @@ export default function EvaluationTemplatesPage() {
       <main className="mx-auto max-w-7xl p-6">
         {!canRead ? (
           <div className="rounded-xl bg-red-50 p-5 text-red-700">
-            You do not have permission to view evaluation
-            templates.
+            {common.messages.permissionDenied}
           </div>
         ) : (
           <>
             <header className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold">
-                  Evaluation templates
+                  {t.title}
                 </h1>
 
                 <p className="mt-1 text-slate-600">
-                  Configure program-specific scoring models
-                  and weighted criteria.
+                  {t.description}
                 </p>
               </div>
 
@@ -266,7 +272,7 @@ export default function EvaluationTemplatesPage() {
                   }}
                   className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white"
                 >
-                  Create template
+                  {t.create}
                 </button>
               )}
             </header>
@@ -278,7 +284,7 @@ export default function EvaluationTemplatesPage() {
                 onChange={(event) =>
                   setSearch(event.target.value)
                 }
-                placeholder="Search templates"
+                placeholder={common.actions.search}
                 className="rounded-lg border px-3 py-2"
               />
 
@@ -290,7 +296,7 @@ export default function EvaluationTemplatesPage() {
                 className="rounded-lg border px-3 py-2"
               >
                 <option value="">
-                  All programs
+                  {common.filters.allPrograms}
                 </option>
 
                 {programsQuery.data?.map(
@@ -316,7 +322,7 @@ export default function EvaluationTemplatesPage() {
                   }
                 />
 
-                Include archived
+                {common.filters.includeArchived}
               </label>
             </section>
 
@@ -332,7 +338,7 @@ export default function EvaluationTemplatesPage() {
             <section className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm">
               {templatesQuery.isPending && (
                 <div className="p-10 text-center text-slate-500">
-                  Loading evaluation templates...
+                  {t.loading}
                 </div>
               )}
 
@@ -340,17 +346,17 @@ export default function EvaluationTemplatesPage() {
                 <div className="p-10 text-center text-red-600">
                   {getApiErrorMessage(
                     templatesQuery.error,
-                    "Evaluation templates could not be loaded.",
+                    common.messages.operationFailed
                   )}
                 </div>
               )}
 
               {templatesQuery.data?.length ===
                 0 && (
-                <div className="p-10 text-center text-slate-500">
-                  No evaluation templates were found.
-                </div>
-              )}
+                  <div className="p-10 text-center text-slate-500">
+                    {t.empty}
+                  </div>
+                )}
 
               {templatesQuery.data &&
                 templatesQuery.data.length > 0 && (
@@ -358,28 +364,28 @@ export default function EvaluationTemplatesPage() {
                     <thead className="border-b bg-slate-50">
                       <tr>
                         <th className="p-4">
-                          Template
+                          {dictionary.pages.evaluations.template}
                         </th>
                         <th className="p-4">
-                          Program
+                          {common.fields.program}
                         </th>
                         <th className="p-4">
-                          Version
+                          {common.fields.version}
                         </th>
                         <th className="p-4">
-                          Score range
+                          {t.scoringRange}
                         </th>
                         <th className="p-4">
-                          Criteria
+                          {t.weightedCriteria}
                         </th>
                         <th className="p-4">
-                          Total weight
+                          {t.totalWeight}
                         </th>
                         <th className="p-4">
-                          Status
+                          {common.fields.status}
                         </th>
                         <th className="p-4">
-                          Actions
+                          {common.fields.actions}
                         </th>
                       </tr>
                     </thead>
@@ -420,13 +426,13 @@ export default function EvaluationTemplatesPage() {
 
                               {template.passingScore !==
                                 null && (
-                                <p className="text-xs text-slate-500">
-                                  Pass:{" "}
-                                  {formatNumber(
-                                    template.passingScore,
-                                  )}
-                                </p>
-                              )}
+                                  <p className="text-xs text-slate-500">
+                                    Pass:{" "}
+                                    {formatNumber(
+                                      template.passingScore,
+                                    )}
+                                  </p>
+                                )}
                             </td>
 
                             <td className="p-4">
@@ -457,12 +463,12 @@ export default function EvaluationTemplatesPage() {
                                   href={`/dashboard/evaluation-templates/${template.id}`}
                                   className="rounded border px-3 py-1.5 text-sm"
                                 >
-                                  View
+                                  {common.actions.view}
                                 </Link>
 
                                 {canManage &&
                                   template.status ===
-                                    "DRAFT" && (
+                                  "DRAFT" && (
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -473,7 +479,7 @@ export default function EvaluationTemplatesPage() {
                                       }}
                                       className="rounded border px-3 py-1.5 text-sm"
                                     >
-                                      Edit
+                                      {common.actions.edit}
                                     </button>
                                   )}
 
@@ -538,6 +544,12 @@ function TemplateStatusAction({
     ARCHIVED: [],
   };
 
+  const {
+    dictionary,
+    statusLabel,
+  } = useLocalization();
+
+
   if (transitions[template.status].length === 0) {
     return null;
   }
@@ -558,12 +570,12 @@ function TemplateStatusAction({
       }}
       className="rounded border px-2 py-1.5 text-sm"
     >
-      <option value="">Status</option>
+      <option value="">{dictionary.common.fields.status}</option>
 
       {transitions[template.status].map(
         (status) => (
           <option key={status} value={status}>
-            {status}
+            {statusLabel(status)}
           </option>
         ),
       )}

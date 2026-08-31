@@ -13,6 +13,7 @@ import {
 import type {
   MediaType,
 } from "./types";
+import { useLocalization } from "../localization/use-localization";
 
 export function MediaPreview({
   mediaId,
@@ -36,6 +37,13 @@ export function MediaPreview({
     retry: false,
   });
 
+  const {
+    dictionary
+  } = useLocalization();
+
+  const t = dictionary.pages.media;
+  const common = dictionary.common;
+
   if (downloadQuery.isPending) {
     return (
       <div className="flex aspect-video items-center justify-center bg-slate-100 text-sm text-slate-500">
@@ -50,7 +58,7 @@ export function MediaPreview({
   ) {
     return (
       <div className="flex aspect-video items-center justify-center bg-slate-100 text-sm text-red-600">
-        Preview unavailable
+        {t.previewUnavailable}
       </div>
     );
   }
@@ -94,7 +102,7 @@ export function MediaPreview({
         rel="noreferrer"
         className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white"
       >
-        Open document
+        {t.openDocument}
       </a>
     </div>
   );

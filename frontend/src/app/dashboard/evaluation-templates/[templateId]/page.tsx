@@ -44,6 +44,7 @@ import type {
 
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
+import { formatMessage, useLocalization } from "@/features/localization/use-localization";
 
 export default function EvaluationTemplateDetailPage() {
     const parameters = useParams<{
@@ -147,6 +148,12 @@ export default function EvaluationTemplateDetailPage() {
     const formSubmitting =
         createMutation.isPending ||
         updateMutation.isPending;
+
+    const { dictionary, terminology, statusLabel, formatDate } =
+        useLocalization();
+
+    const t = dictionary.pages.evaluationTemplateDetail;
+    const common = dictionary.common;
 
     async function refreshTemplate() {
         await Promise.all([
@@ -306,7 +313,7 @@ export default function EvaluationTemplateDetailPage() {
                     href="/dashboard/evaluation-templates"
                     className="text-sm font-medium text-blue-700 hover:underline"
                 >
-                    ← Back to templates
+                    {t.backToTemplates}
                 </Link>
 
                 <header className="mt-4 flex flex-wrap items-start justify-between gap-4">
@@ -327,7 +334,7 @@ export default function EvaluationTemplateDetailPage() {
                         </p>
 
                         <p className="mt-1 text-sm text-slate-500">
-                            Program: {template.programName}
+                            {t.program}: {template.programName}
                         </p>
                     </div>
 
@@ -358,29 +365,32 @@ export default function EvaluationTemplateDetailPage() {
 
                 {template.status !== "DRAFT" && (
                     <div className="mt-6 rounded-lg bg-blue-50 p-4 text-blue-800">
-                        This template is{" "}
-                        {template.status.toLowerCase()} and is
-                        read-only.
+                        {formatMessage(
+                            t.readOnlyMessage,
+                            {
+                                status: statusLabel(template.status).toLowerCase()
+                            },
+                        )}
                     </div>
                 )}
 
                 <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                     <SummaryCard
-                        label="Minimum score"
+                        label={common.fields.minimumScore}
                         value={formatNumber(
                             template.minimumScore,
                         )}
                     />
 
                     <SummaryCard
-                        label="Maximum score"
+                        label={common.fields.maximumScore}
                         value={formatNumber(
                             template.maximumScore,
                         )}
                     />
 
                     <SummaryCard
-                        label="Passing score"
+                        label={common.fields.passingScore}
                         value={
                             template.passingScore === null
                                 ? "Not defined"
@@ -391,12 +401,12 @@ export default function EvaluationTemplateDetailPage() {
                     />
 
                     <SummaryCard
-                        label="Criteria"
+                        label={t.criteria}
                         value={template.criterionCount.toString()}
                     />
 
                     <SummaryCard
-                        label="Total weight"
+                        label={dictionary.pages.evaluationTemplates.totalWeight}
                         value={`${template.totalWeight.toFixed(2)}%`}
                         highlight={
                             template.totalWeight === 100
@@ -407,7 +417,7 @@ export default function EvaluationTemplateDetailPage() {
                 {template.description && (
                     <section className="mt-6 rounded-xl bg-white p-6 shadow-sm">
                         <h2 className="text-lg font-semibold">
-                            Description
+                            {common.fields.description}
                         </h2>
 
                         <p className="mt-3 whitespace-pre-wrap text-slate-700">
@@ -420,16 +430,15 @@ export default function EvaluationTemplateDetailPage() {
                     <header className="flex flex-wrap items-center justify-between gap-4 border-b p-6">
                         <div>
                             <h2 className="text-lg font-semibold">
-                                Weighted criteria
+                                {t.criteria}
                             </h2>
 
                             <p className="mt-1 text-sm text-slate-600">
-                                Criteria must total exactly 100% before
-                                activation.
+                                {t.criteriaDescription}
                             </p>
 
                             <p className="mt-2 text-sm">
-                                Remaining weight:{" "}
+                                {t.remainingWeight}:{" "}
                                 <strong
                                     className={
                                         remainingWeight === 0
@@ -459,7 +468,7 @@ export default function EvaluationTemplateDetailPage() {
 
                     {criteriaQuery.isPending && (
                         <div className="p-8 text-center text-slate-500">
-                            Loading evaluation criteria...
+                            {t.loadingCriteria}
                         </div>
                     )}
 
@@ -467,7 +476,7 @@ export default function EvaluationTemplateDetailPage() {
                         <div className="p-8 text-center text-red-600">
                             {getApiErrorMessage(
                                 criteriaQuery.error,
-                                "Evaluation criteria could not be loaded.",
+                                t.criteriaLoadError,
                             )}
                         </div>
                     )}
@@ -476,7 +485,7 @@ export default function EvaluationTemplateDetailPage() {
                         !criteriaQuery.isError &&
                         criteria.length === 0 && (
                             <div className="p-8 text-center text-slate-500">
-                                No evaluation criteria have been defined.
+                                {t.noCriteria}
                             </div>
                         )}
 
@@ -486,19 +495,19 @@ export default function EvaluationTemplateDetailPage() {
                                 <thead className="border-b bg-slate-50">
                                     <tr>
                                         <th className="p-4">
-                                            Sequence
+                                            {t.sequence}
                                         </th>
                                         <th className="p-4">
-                                            Criterion
+                                            {t.criterion}
                                         </th>
                                         <th className="p-4">
-                                            Description
+                                            {t.descriptionTitle}
                                         </th>
                                         <th className="p-4">
-                                            Weight
+                                            {common.fields.weight}
                                         </th>
                                         <th className="p-4">
-                                            Actions
+                                            {common.fields.actions}
                                         </th>
                                     </tr>
                                 </thead>
@@ -546,7 +555,7 @@ export default function EvaluationTemplateDetailPage() {
                                                         }}
                                                         className="rounded border px-3 py-1.5 text-sm"
                                                     >
-                                                        Edit
+                                                        {common.actions.edit}
                                                     </button>
                                                 )}
                                             </td>
@@ -620,8 +629,8 @@ function SummaryCard({
 
             <p
                 className={`mt-2 text-xl font-semibold ${highlight
-                        ? "text-green-700"
-                        : "text-slate-900"
+                    ? "text-green-700"
+                    : "text-slate-900"
                     }`}
             >
                 {value}

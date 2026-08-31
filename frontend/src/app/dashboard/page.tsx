@@ -40,6 +40,7 @@ import {
 import {
   hasPermission,
 } from "@/lib/permissions";
+import { useLocalization } from "@/features/localization/use-localization";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -50,6 +51,15 @@ export default function DashboardPage() {
   });
 
   const currentUser = currentUserQuery.data;
+
+  const isGuardian =
+    currentUser?.roles.includes("GUARDIAN") ?? false;
+
+  useEffect(() => {
+    if (currentUser && isGuardian) {
+      router.replace("/dashboard/my-children");
+    }
+  }, [currentUser, isGuardian, router]);
 
   const canReadReports = hasPermission(
     currentUser,
@@ -66,6 +76,13 @@ export default function DashboardPage() {
       currentUserQuery.isSuccess &&
       canReadReports,
   });
+
+  const {
+    dictionary,
+  } = useLocalization();
+
+  const t = dictionary.pages.dashboard;
+  const common = dictionary.common;
 
   useEffect(() => {
     if (
@@ -92,6 +109,7 @@ export default function DashboardPage() {
    * Guardians do not have reports.read. Their primary
    * navigation begins at My Children.
    */
+
   if (!canReadReports) {
     return (
       <div className="min-h-screen bg-slate-100">
@@ -112,7 +130,15 @@ export default function DashboardPage() {
       </div>
     );
   }
-
+  if (isGuardian) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100">
+        <p className="text-slate-600">
+          Opening guardian portal...
+        </p>
+      </main>
+    );
+  }
   return (
     <div className="min-h-screen bg-slate-100">
       <DashboardHeader user={currentUser} />
@@ -122,19 +148,19 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold">
             {dashboardQuery.data?.dashboardType ===
               "INSTRUCTOR"
-              ? "Instructor dashboard"
-              : "Administrator dashboard"}
+              ? t.instructorTitle
+              : t.administratorTitle}
           </h1>
 
           <p className="mt-1 text-slate-600">
-            Welcome, {currentUser.firstName}{" "}
+            {t.welcome}, {currentUser.firstName}{" "}
             {currentUser.lastName}.
           </p>
         </header>
 
         {dashboardQuery.isPending && (
           <div className="mt-6 rounded-xl bg-white p-8 text-center">
-            Loading dashboard analytics...
+            t.loading
           </div>
         )}
 
@@ -142,7 +168,7 @@ export default function DashboardPage() {
           <div className="mt-6 rounded-xl bg-red-50 p-5 text-red-700">
             {getApiErrorMessage(
               dashboardQuery.error,
-              "Dashboard analytics could not be loaded.",
+              t.loadFailiure,
             )}
           </div>
         )}
@@ -151,7 +177,7 @@ export default function DashboardPage() {
           <>
             <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <DashboardMetricCard
-                label="Active students"
+                label={t.activeStudents}
                 value={
                   dashboardQuery.data
                     .activeStudentCount
@@ -161,7 +187,7 @@ export default function DashboardPage() {
               />
 
               <DashboardMetricCard
-                label="Active groups"
+                label={t.activeGroups}
                 value={
                   dashboardQuery.data
                     .activeGroupCount
@@ -170,7 +196,7 @@ export default function DashboardPage() {
               />
 
               <DashboardMetricCard
-                label="Active staff"
+                label={t.activeStaff}
                 value={
                   dashboardQuery.data
                     .activeStaffCount
@@ -179,7 +205,7 @@ export default function DashboardPage() {
               />
 
               <DashboardMetricCard
-                label="Active curricula"
+                label={t.activeCurricula}
                 value={
                   dashboardQuery.data
                     .activeCurriculumCount
@@ -190,7 +216,7 @@ export default function DashboardPage() {
 
             <section className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <DashboardMetricCard
-                label="Upcoming sessions"
+                label={t.upcomingSessions}
                 value={
                   dashboardQuery.data
                     .upcomingSessionCount
@@ -200,12 +226,12 @@ export default function DashboardPage() {
               />
 
               <DashboardMetricCard
-                label="Missing attendance"
+                label={t.missingAttendance}
                 value={
                   dashboardQuery.data
                     .sessionsMissingAttendanceCount
                 }
-                description="Past sessions without finalized attendance"
+                description={t.missingAttendance}
                 href="/dashboard/sessions"
                 tone={
                   dashboardQuery.data
@@ -216,7 +242,7 @@ export default function DashboardPage() {
               />
 
               <DashboardMetricCard
-                label="Draft evaluations"
+                label={t.draftEvaluations}
                 value={
                   dashboardQuery.data
                     .draftEvaluationCount
@@ -226,7 +252,7 @@ export default function DashboardPage() {
               />
 
               <DashboardMetricCard
-                label="Pending publication"
+                label={t.pendingPublication}
                 value={
                   dashboardQuery.data
                     .submittedEvaluationCount
@@ -241,7 +267,7 @@ export default function DashboardPage() {
               />
 
               <DashboardMetricCard
-                label="Published evaluations"
+                label={t.publishedEvaluations}
                 value={
                   dashboardQuery.data
                     .publishedEvaluationCount

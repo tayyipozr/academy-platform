@@ -49,6 +49,7 @@ import { hasPermission } from "@/lib/permissions";
 import {
     MediaGallery,
 } from "@/features/media/media-gallery";
+import { useLocalization } from "@/features/localization/use-localization";
 
 const statuses: AttendanceStatus[] = [
     "NOT_RECORDED",
@@ -218,6 +219,13 @@ export default function SessionAttendancePage() {
                 record.status === "LATE" &&
                 !record.arrivalTime,
         );
+
+    const {
+        dictionary,
+    } = useLocalization();
+
+    const t = dictionary.pages.sessionDetail;
+    const common = dictionary.common;
 
     async function refreshAttendance() {
         await Promise.all([
@@ -474,13 +482,13 @@ export default function SessionAttendancePage() {
                     href="/dashboard/sessions"
                     className="text-sm font-medium text-blue-700 hover:underline"
                 >
-                    ← Back to schedule
+                    ← {t.backToSchedule}
                 </Link>
 
                 <header className="mt-4 flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold">
-                            Session attendance
+                            {t.pageTitle}
                         </h1>
 
                         <p className="mt-1 text-slate-600">
@@ -506,7 +514,7 @@ export default function SessionAttendancePage() {
                                     }}
                                     className="rounded-lg border border-amber-300 px-4 py-2 font-medium text-amber-700"
                                 >
-                                    Open correction
+                                    {t.openCorrection}
                                 </button>
                             )}
 

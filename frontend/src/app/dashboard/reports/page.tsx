@@ -33,6 +33,7 @@ import {
 import {
   hasPermission,
 } from "@/lib/permissions";
+import { useLocalization } from "@/features/localization/use-localization";
 
 export default function ReportsPage() {
   const [status, setStatus] =
@@ -51,6 +52,16 @@ export default function ReportsPage() {
   );
 
   const filters = { status };
+
+  const {
+    dictionary,
+    formatDate,
+    formatDateTime,
+    statusLabel
+  } = useLocalization();
+
+  const t = dictionary.pages.reports;
+  const common = dictionary.common;
 
   const exportsQuery = useQuery({
     queryKey:
@@ -80,7 +91,7 @@ export default function ReportsPage() {
   });
 
   if (currentUserQuery.isPending) {
-    return <main className="p-8">Loading...</main>;
+    return <main className="p-8">{common.messages.loading}</main>;
   }
 
   if (!currentUser) {
@@ -94,19 +105,17 @@ export default function ReportsPage() {
       <main className="mx-auto max-w-7xl p-6">
         {!canExport ? (
           <div className="rounded-xl bg-red-50 p-5 text-red-700">
-            You do not have permission to view report
-            exports.
+            {common.messages.permissionDenied}
           </div>
         ) : (
           <>
             <header>
               <h1 className="text-2xl font-bold">
-                Report exports
+                {t.title}
               </h1>
 
               <p className="mt-1 text-slate-600">
-                View PDF generation history and export
-                status.
+                {t.description}
               </p>
             </header>
 
@@ -115,7 +124,7 @@ export default function ReportsPage() {
                 htmlFor="reportStatus"
                 className="block text-sm font-medium"
               >
-                Export status
+                {common.fields.status}
               </label>
 
               <select
@@ -124,36 +133,36 @@ export default function ReportsPage() {
                 onChange={(event) =>
                   setStatus(
                     event.target.value as
-                      | ReportExportStatus
-                      | "",
+                    | ReportExportStatus
+                    | "",
                   )
                 }
                 className="mt-1 w-full max-w-sm rounded-lg border px-3 py-2"
               >
                 <option value="">
-                  All statuses
+                  {common.filters.allStatuses}
                 </option>
                 <option value="PENDING">
-                  Pending
+                  {common.statuses.PENDING}
                 </option>
                 <option value="PROCESSING">
-                  Processing
+                  {common.statuses.PROCESSING}
                 </option>
                 <option value="COMPLETED">
-                  Completed
+                  {common.statuses.COMPLETED}
                 </option>
                 <option value="FAILED">
-                  Failed
+                  {common.statuses.FAILED}
                 </option>
                 <option value="EXPIRED">
-                  Expired
+                  {common.statuses.EXPIRED}
                 </option>
               </select>
             </section>
 
             {exportsQuery.isPending && (
               <div className="mt-6 rounded-xl bg-white p-8 text-center">
-                Loading report exports...
+                {t.loading}
               </div>
             )}
 
@@ -161,17 +170,17 @@ export default function ReportsPage() {
               <div className="mt-6 rounded-xl bg-red-50 p-5 text-red-700">
                 {getApiErrorMessage(
                   exportsQuery.error,
-                  "Report exports could not be loaded.",
+                  common.messages.operationFailed,
                 )}
               </div>
             )}
 
             {exportsQuery.data?.length ===
               0 && (
-              <div className="mt-6 rounded-xl bg-white p-8 text-center text-slate-500">
-                No report exports were found.
-              </div>
-            )}
+                <div className="mt-6 rounded-xl bg-white p-8 text-center text-slate-500">
+                  {t.empty}
+                </div>
+              )}
 
             {exportsQuery.data &&
               exportsQuery.data.length > 0 && (
@@ -180,22 +189,22 @@ export default function ReportsPage() {
                     <thead className="border-b bg-slate-50">
                       <tr>
                         <th className="p-4">
-                          Student
+                          {common.fields.student}
                         </th>
                         <th className="p-4">
-                          Group
+                          {common.fields.group}
                         </th>
                         <th className="p-4">
-                          Period
+                          {t.period}
                         </th>
                         <th className="p-4">
-                          Requested
+                          {t.requested}
                         </th>
                         <th className="p-4">
-                          Status
+                          {common.fields.status}
                         </th>
                         <th className="p-4">
-                          Size
+                          {t.fileSize}
                         </th>
                       </tr>
                     </thead>
@@ -220,27 +229,25 @@ export default function ReportsPage() {
                             </td>
 
                             <td className="p-4">
-                              {item.dateFrom || "—"}
+                              {formatDate(item.dateFrom) || "—"}
                               {" – "}
-                              {item.dateTo || "—"}
+                              {formatDate(item.dateTo) || "—"}
                             </td>
 
                             <td className="p-4">
-                              {new Date(
-                                item.requestedAt,
-                              ).toLocaleString()}
+                              {formatDateTime(item.requestedAt)}
                             </td>
 
                             <td className="p-4">
-                              {item.status}
+                              {statusLabel(item.status)}
                             </td>
 
                             <td className="p-4">
                               {item.fileSize === null
                                 ? "—"
                                 : formatFileSize(
-                                    item.fileSize,
-                                  )}
+                                  item.fileSize,
+                                )}
                             </td>
                           </tr>
                         ),

@@ -1,3 +1,4 @@
+import { useLocalization } from "../localization/use-localization";
 import type {
   EvaluationTemplateStatus,
 } from "./types";
@@ -16,11 +17,16 @@ export function TemplateStatusBadge({
 }: {
   status: EvaluationTemplateStatus;
 }) {
+
+  const {
+    statusLabel,
+  } = useLocalization();
+
   return (
     <span
       className={`rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}
     >
-      {status}
+      {statusLabel(status)}
     </span>
   );
 }

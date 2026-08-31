@@ -25,3 +25,11 @@ frontend/coverage/
 
 # Docker data
 docker-data/
+
+# Production secrets
+infrastructure/secrets/*
+!infrastructure/secrets/.gitkeep
+infrastructure/certbot/conf/*
+infrastructure/certbot/www/*
+!infrastructure/certbot/conf/.gitkeep
+!infrastructure/certbot/www/.gitkeep

@@ -401,13 +401,14 @@ public class StudentProgressPdfRenderer {
             ensureSpace(22);
 
             stream.moveTo(PAGE_MARGIN, y);
+
             stream.lineTo(
                     page.getMediaBox().getWidth()
                     - PAGE_MARGIN,
                     y
             );
 
-            stream.setStrokingColor(200);
+            stream.setStrokingColor(0.78f);
             stream.stroke();
 
             y -= 18;

@@ -21,6 +21,7 @@ import type {
 import {
   getApiErrorMessage,
 } from "@/lib/api/error-message";
+import { useLocalization } from "../localization/use-localization";
 
 const acceptedTypes = [
   "image/jpeg",
@@ -66,6 +67,16 @@ export function MediaUploadDialog({
 
   const [error, setError] =
     useState<string | null>(null);
+
+
+  const {
+    dictionary,
+    mediaLabel,
+    statusLabel
+  } = useLocalization();
+
+  const t = dictionary.pages.media;
+  const common = dictionary.common;
 
   async function handleSubmit(
     event: React.FormEvent<HTMLFormElement>,
@@ -128,7 +139,7 @@ export function MediaUploadDialog({
       setError(
         getApiErrorMessage(
           requestError,
-          "The media file could not be uploaded.",
+          common.messages.operationFailed,
         ),
       );
     } finally {
@@ -145,7 +156,7 @@ export function MediaUploadDialog({
       <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
         <header className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">
-            Upload media
+            {t.upload}
           </h2>
 
           <button
@@ -154,7 +165,7 @@ export function MediaUploadDialog({
             onClick={onClose}
             className="text-slate-500"
           >
-            Close
+            {common.actions.close}
           </button>
         </header>
 
@@ -167,7 +178,7 @@ export function MediaUploadDialog({
               htmlFor="mediaFile"
               className="block text-sm font-medium"
             >
-              File
+              {t.file}
             </label>
 
             <input
@@ -195,7 +206,7 @@ export function MediaUploadDialog({
           <div className="grid gap-4 md:grid-cols-2">
             <Field
               id="mediaTitle"
-              label="Title"
+              label={common.fields.title}
             >
               <input
                 id="mediaTitle"
@@ -212,7 +223,7 @@ export function MediaUploadDialog({
             {target && (
               <Field
                 id="mediaPurpose"
-                label="Purpose"
+                label={t.purpose}
               >
                 <select
                   id="mediaPurpose"
@@ -227,10 +238,10 @@ export function MediaUploadDialog({
                   className="w-full rounded-lg border px-3 py-2"
                 >
                   <option value="INTERNAL">
-                    Internal portal
+                    {t.internalPortal}
                   </option>
                   <option value="MARKETING">
-                    Marketing
+                    {t.marketing}
                   </option>
                 </select>
               </Field>
@@ -239,7 +250,7 @@ export function MediaUploadDialog({
 
           <Field
             id="mediaDescription"
-            label="Description"
+            label={common.fields.description}
           >
             <textarea
               id="mediaDescription"
@@ -289,7 +300,7 @@ export function MediaUploadDialog({
 
                 <span>
                   <span className="block text-sm font-medium">
-                    Use as cover media
+                    {t.coverMedia}
                   </span>
 
                   <span className="text-xs text-slate-500">
@@ -304,7 +315,7 @@ export function MediaUploadDialog({
           {submitting && (
             <div>
               <div className="flex justify-between text-sm">
-                <span>Upload progress</span>
+                <span>{t.uploadProgress}</span>
                 <span>{progress}%</span>
               </div>
 
@@ -332,7 +343,7 @@ export function MediaUploadDialog({
               onClick={onClose}
               className="rounded-lg border px-4 py-2"
             >
-              Cancel
+              {common.actions.cancel}
             </button>
 
             <button
@@ -341,8 +352,8 @@ export function MediaUploadDialog({
               className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-50"
             >
               {submitting
-                ? "Uploading..."
-                : "Upload media"}
+                ? common.actions.uploading
+                : t.upload}
             </button>
           </footer>
         </form>

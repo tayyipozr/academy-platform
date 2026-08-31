@@ -14,6 +14,7 @@ import {
 } from "./staff-form-schema";
 
 import type { StaffMember } from "./types";
+import { useLocalization } from "../localization/use-localization";
 
 type StaffFormDialogProps = {
   staff?: StaffMember;
@@ -69,17 +70,25 @@ export function StaffFormDialog({
     });
   }, [reset, staff]);
 
+  const {
+    dictionary,
+  } = useLocalization();
+
+  const t = dictionary.pages.staff;
+  const common = dictionary.common;
+
+
   const selectableAccounts = staff
     ? [
-        {
-          membershipId: staff.membershipId,
-          userId: staff.userId,
-          email: staff.email,
-          firstName: staff.firstName,
-          lastName: staff.lastName,
-          membershipStatus: "ACTIVE" as const,
-        },
-      ]
+      {
+        membershipId: staff.membershipId,
+        userId: staff.userId,
+        email: staff.email,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        membershipStatus: "ACTIVE" as const,
+      },
+    ]
     : accounts;
 
   return (
@@ -91,9 +100,7 @@ export function StaffFormDialog({
       <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
         <header className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">
-            {staff
-              ? "Edit staff profile"
-              : "Create staff profile"}
+            {staff ? t.edit : t.create}
           </h2>
 
           <button
@@ -102,7 +109,7 @@ export function StaffFormDialog({
             onClick={onClose}
             className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100"
           >
-            Close
+            {common.actions.close}
           </button>
         </header>
 
@@ -115,7 +122,7 @@ export function StaffFormDialog({
               htmlFor="membershipId"
               className="block text-sm font-medium"
             >
-              Instructor account
+              {t.instructorAccount}
             </label>
 
             <select
@@ -125,7 +132,7 @@ export function StaffFormDialog({
               {...register("membershipId")}
             >
               <option value="">
-                Select an instructor
+                {t.selectInstructorAccount}
               </option>
 
               {selectableAccounts.map((account) => (
@@ -147,9 +154,7 @@ export function StaffFormDialog({
 
             {!staff && accounts.length === 0 && (
               <p className="mt-2 text-sm text-amber-700">
-                No eligible instructor account is
-                available. Create or invite an instructor
-                from the Users page first.
+                {t.noEligibleAccount}
               </p>
             )}
           </div>
@@ -157,7 +162,7 @@ export function StaffFormDialog({
           <div className="grid gap-4 md:grid-cols-2">
             <FormField
               id="staffNumber"
-              label="Staff number"
+              label={t.staffNumber}
               error={errors.staffNumber?.message}
             >
               <input
@@ -169,7 +174,7 @@ export function StaffFormDialog({
 
             <FormField
               id="branchId"
-              label="Branch"
+              label={t.branch}
               error={errors.branchId?.message}
             >
               <select
@@ -178,7 +183,7 @@ export function StaffFormDialog({
                 {...register("branchId")}
               >
                 <option value="">
-                  No branch assignment
+                  {t.noBranchAssignment}
                 </option>
 
                 {branches
@@ -199,12 +204,12 @@ export function StaffFormDialog({
 
             <FormField
               id="title"
-              label="Title"
+              label={t.titleField}
               error={errors.title?.message}
             >
               <input
                 id="title"
-                placeholder="Senior Coach"
+                placeholder={t.titlePlaceholder}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2"
                 {...register("title")}
               />
@@ -212,12 +217,12 @@ export function StaffFormDialog({
 
             <FormField
               id="specialization"
-              label="Specialization"
+              label={t.specialization}
               error={errors.specialization?.message}
             >
               <input
                 id="specialization"
-                placeholder="Football, English, Piano"
+                placeholder={t.specializationPlaceholder}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2"
                 {...register("specialization")}
               />
@@ -225,7 +230,7 @@ export function StaffFormDialog({
 
             <FormField
               id="hiredAt"
-              label="Hire date"
+              label={t.hireDate}
               error={errors.hiredAt?.message}
             >
               <input
@@ -238,7 +243,7 @@ export function StaffFormDialog({
 
             <FormField
               id="endedAt"
-              label="Employment end date"
+              label={t.employmentEndDate}
               error={errors.endedAt?.message}
             >
               <input
@@ -252,7 +257,7 @@ export function StaffFormDialog({
 
           <FormField
             id="biography"
-            label="Biography"
+            label={t.biography}
             error={errors.biography?.message}
           >
             <textarea
@@ -279,7 +284,7 @@ export function StaffFormDialog({
               onClick={onClose}
               className="rounded-lg border border-slate-300 px-4 py-2"
             >
-              Cancel
+              {common.actions.cancel}
             </button>
 
             <button
@@ -291,8 +296,8 @@ export function StaffFormDialog({
               className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-50"
             >
               {submitting
-                ? "Saving..."
-                : "Save staff profile"}
+                ? common.actions.saving
+                : common.actions.save}
             </button>
           </footer>
         </form>

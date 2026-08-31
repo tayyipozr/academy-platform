@@ -14,6 +14,7 @@ import type {
   OrganizationUser,
   Role,
 } from "./types";
+import { useLocalization } from "../localization/use-localization";
 
 type UserFormDialogProps = {
   mode: UserFormMode;
@@ -57,6 +58,16 @@ export function UserFormDialog({
     },
   });
 
+
+  const {
+    dictionary,
+    statusLabel,
+    formatDateTime,
+  } = useLocalization();
+
+  const t = dictionary.pages.users;
+  const common = dictionary.common;
+
   useEffect(() => {
     reset({
       email: user?.email ?? "",
@@ -79,10 +90,11 @@ export function UserFormDialog({
   });
 
   const title = {
-    create: "Create active user",
-    invite: "Invite user",
-    edit: "Edit organization user",
+    create: t.createActiveUser,
+    invite: t.inviteUser,
+    edit: t.editTitle,
   }[mode];
+
 
   return (
     <div
@@ -106,7 +118,7 @@ export function UserFormDialog({
             disabled={submitting}
             className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100"
           >
-            Close
+            {common.actions.close}
           </button>
         </header>
 
@@ -119,7 +131,7 @@ export function UserFormDialog({
               htmlFor="email"
               className="block text-sm font-medium"
             >
-              Email
+              {common.fields.email}
             </label>
 
             <input
@@ -143,7 +155,7 @@ export function UserFormDialog({
                 htmlFor="firstName"
                 className="block text-sm font-medium"
               >
-                First name
+                {common.fields.firstName}
               </label>
 
               <input
@@ -164,7 +176,7 @@ export function UserFormDialog({
                 htmlFor="lastName"
                 className="block text-sm font-medium"
               >
-                Last name
+                {common.fields.lastName}
               </label>
 
               <input
@@ -187,7 +199,7 @@ export function UserFormDialog({
                 htmlFor="temporaryPassword"
                 className="block text-sm font-medium"
               >
-                Temporary password
+                {common.fields.temporaryPassword}
               </label>
 
               <input
@@ -211,7 +223,7 @@ export function UserFormDialog({
 
           <fieldset>
             <legend className="text-sm font-medium">
-              Roles
+              {common.fields.roles}
             </legend>
 
             <div className="mt-2 space-y-2 rounded-lg border border-slate-200 p-3">
@@ -265,7 +277,7 @@ export function UserFormDialog({
               disabled={submitting}
               className="rounded-lg border border-slate-300 px-4 py-2"
             >
-              Cancel
+              {common.actions.cancel}
             </button>
 
             <button
@@ -274,8 +286,8 @@ export function UserFormDialog({
               className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-50"
             >
               {submitting
-                ? "Saving..."
-                : "Save"}
+                ? common.actions.saving
+                : common.actions.save}
             </button>
           </footer>
         </form>

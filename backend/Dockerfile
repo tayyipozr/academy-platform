@@ -23,11 +23,11 @@ RUN apt-get update \
 
 RUN groupadd --system academy \
     && useradd \
-       --system \
-       --gid academy \
-       --home-dir /app \
-       --shell /usr/sbin/nologin \
-       academy
+    --system \
+    --gid academy \
+    --home-dir /app \
+    --shell /usr/sbin/nologin \
+    academy
 
 WORKDIR /app
 
@@ -37,11 +37,16 @@ COPY --from=builder \
 
 RUN chown academy:academy application.jar
 
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+
+RUN chmod 500 /app/docker-entrypoint.sh \
+    && chown academy:academy \
+    /app/docker-entrypoint.sh
+
 USER academy
 
 EXPOSE 8080
 
 ENV JAVA_OPTS=""
 
-ENTRYPOINT ["sh", "-c", \
-  "exec java $JAVA_OPTS -jar application.jar"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

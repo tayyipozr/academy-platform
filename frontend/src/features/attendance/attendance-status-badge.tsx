@@ -1,3 +1,4 @@
+import { useLocalization } from "../localization/use-localization";
 import type {
   AttendanceStatus,
 } from "./types";
@@ -30,11 +31,16 @@ export function AttendanceStatusBadge({
 }: {
   status: AttendanceStatus;
 }) {
+
+  const {
+    statusLabel,
+  } = useLocalization();
+
   return (
     <span
       className={`rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}
     >
-      {labels[status]}
+      {statusLabel(status)}
     </span>
   );
 }

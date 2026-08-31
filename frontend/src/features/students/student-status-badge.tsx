@@ -1,3 +1,4 @@
+import { useLocalization } from "../localization/use-localization";
 import type { StudentStatus } from "./types";
 
 const styles: Record<StudentStatus, string> = {
@@ -19,11 +20,16 @@ export function StudentStatusBadge({
 }: {
   status: StudentStatus;
 }) {
+
+  const {
+    statusLabel,
+  } = useLocalization();
+
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}
     >
-      {labels[status]}
+      {statusLabel(status)}
     </span>
   );
 }

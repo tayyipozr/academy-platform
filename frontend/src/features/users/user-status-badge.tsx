@@ -1,8 +1,9 @@
+import { useLocalization } from "../localization/use-localization";
 import type {
   MembershipStatus,
 } from "./types";
 
-const styles: Record<MembershipStatus, string> = {
+const styles: Record<string, string> = {
   ACTIVE:
     "bg-green-100 text-green-700",
   INVITED:
@@ -25,11 +26,16 @@ export function UserStatusBadge({
 }: {
   status: MembershipStatus;
 }) {
+
+  const {
+    statusLabel,
+  } = useLocalization();
+
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}
     >
-      {labels[status]}
+      {statusLabel(status)}
     </span>
   );
 }

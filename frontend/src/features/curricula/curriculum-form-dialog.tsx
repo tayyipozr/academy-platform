@@ -12,6 +12,7 @@ import {
 } from "./curriculum-form-schema";
 
 import type { Curriculum } from "./types";
+import { useLocalization } from "../localization/use-localization";
 
 type CurriculumFormDialogProps = {
   curriculum?: Curriculum;
@@ -62,6 +63,13 @@ export function CurriculumFormDialog({
     });
   }, [curriculum, reset]);
 
+  const {
+    dictionary,
+  } = useLocalization();
+
+  const t = dictionary.pages.curricula;
+  const common = dictionary.common;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
@@ -71,9 +79,7 @@ export function CurriculumFormDialog({
       <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
         <header className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">
-            {curriculum
-              ? "Edit curriculum"
-              : "Create curriculum"}
+            {curriculum ? t.edit : t.create}
           </h2>
 
           <button
@@ -82,7 +88,7 @@ export function CurriculumFormDialog({
             onClick={onClose}
             className="rounded px-2 py-1 text-slate-500"
           >
-            Close
+            {common.actions.close}
           </button>
         </header>
 
@@ -95,7 +101,7 @@ export function CurriculumFormDialog({
               htmlFor="programId"
               className="block text-sm font-medium"
             >
-              Program
+              {common.fields.program}
             </label>
 
             <select
@@ -105,7 +111,7 @@ export function CurriculumFormDialog({
               {...register("programId")}
             >
               <option value="">
-                Select a program
+                {dictionary.pages.programs.select}
               </option>
 
               {programs
@@ -133,7 +139,7 @@ export function CurriculumFormDialog({
           <div className="grid gap-4 md:grid-cols-2">
             <FormField
               id="curriculumCode"
-              label="Curriculum code"
+              label={t.curriculumCode}
               error={errors.code?.message}
             >
               <input
@@ -145,7 +151,7 @@ export function CurriculumFormDialog({
 
             <FormField
               id="versionLabel"
-              label="Version"
+              label={common.fields.version}
               error={errors.versionLabel?.message}
             >
               <input
@@ -159,7 +165,7 @@ export function CurriculumFormDialog({
 
           <FormField
             id="curriculumName"
-            label="Curriculum name"
+            label={t.curriculumName}
             error={errors.name?.message}
           >
             <input
@@ -171,7 +177,7 @@ export function CurriculumFormDialog({
 
           <FormField
             id="curriculumDescription"
-            label="Description"
+            label={common.fields.description}
             error={errors.description?.message}
           >
             <textarea
@@ -198,7 +204,7 @@ export function CurriculumFormDialog({
               disabled={submitting}
               className="rounded-lg border px-4 py-2"
             >
-              Cancel
+              {common.actions.cancel}
             </button>
 
             <button
@@ -207,8 +213,8 @@ export function CurriculumFormDialog({
               className="rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
             >
               {submitting
-                ? "Saving..."
-                : "Save curriculum"}
+                ? common.actions.saving
+                : common.actions.save}
             </button>
           </footer>
         </form>

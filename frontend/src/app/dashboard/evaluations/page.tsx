@@ -40,6 +40,7 @@ import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
 
 import { useSearchParams } from "next/navigation";
+import { useLocalization } from "@/features/localization/use-localization";
 
 function EvaluationsPageContent() {
   const queryClient = useQueryClient();
@@ -176,6 +177,14 @@ function EvaluationsPageContent() {
     return null;
   }
 
+  const {
+    dictionary,
+    formatDate
+  } = useLocalization();
+
+  const t = dictionary.pages.evaluations;
+  const common = dictionary.common;
+
   return (
     <div className="min-h-screen bg-slate-100">
       <DashboardHeader user={currentUser} />
@@ -183,21 +192,18 @@ function EvaluationsPageContent() {
       <main className="mx-auto max-w-7xl p-6">
         {!canRead ? (
           <div className="rounded-xl bg-red-50 p-5 text-red-700">
-            You do not have permission to view
-            evaluations.
+            {common.messages.permissionDenied}
           </div>
         ) : (
           <>
             <header className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold">
-                  Student evaluations
+                  {t.title}
                 </h1>
 
                 <p className="mt-1 text-slate-600">
-                  Score student performance, submit
-                  evaluations, and publish approved
-                  results.
+                  {t.description}
                 </p>
               </div>
 
@@ -212,7 +218,7 @@ function EvaluationsPageContent() {
                   href="/dashboard/evaluations/new"
                   className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white"
                 >
-                  Create evaluation
+                  {t.create}
                 </Link>
               )}
             </header>
@@ -220,7 +226,7 @@ function EvaluationsPageContent() {
             <section className="mt-6 grid gap-3 rounded-xl bg-white p-4 md:grid-cols-4">
               <FilterField
                 id="evaluationGroup"
-                label="Group"
+                label={common.fields.group}
               >
                 <select
                   id="evaluationGroup"
@@ -231,7 +237,7 @@ function EvaluationsPageContent() {
                   className="w-full rounded-lg border px-3 py-2"
                 >
                   <option value="">
-                    All groups
+                    {common.filters.allGroups}
                   </option>
 
                   {groupsQuery.data?.map((group) => (
@@ -247,7 +253,7 @@ function EvaluationsPageContent() {
 
               <FilterField
                 id="evaluationStatus"
-                label="Status"
+                label={common.fields.status}
               >
                 <select
                   id="evaluationStatus"
@@ -262,23 +268,23 @@ function EvaluationsPageContent() {
                   className="w-full rounded-lg border px-3 py-2"
                 >
                   <option value="">
-                    All statuses
+                    {common.filters.allStatuses}
                   </option>
                   <option value="DRAFT">
-                    Draft
+                    {common.statuses.DRAFT}
                   </option>
                   <option value="SUBMITTED">
-                    Submitted
+                    {common.statuses.SUBMITTED}
                   </option>
                   <option value="PUBLISHED">
-                    Published
+                    {common.statuses.PUBLISHED}
                   </option>
                 </select>
               </FilterField>
 
               <FilterField
                 id="evaluationDateFrom"
-                label="Date from"
+                label={common.fields.dateFrom}
               >
                 <input
                   id="evaluationDateFrom"
@@ -293,7 +299,7 @@ function EvaluationsPageContent() {
 
               <FilterField
                 id="evaluationDateTo"
-                label="Date to"
+                label={common.fields.dateTo}
               >
                 <input
                   id="evaluationDateTo"
@@ -319,7 +325,7 @@ function EvaluationsPageContent() {
             <section className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm">
               {evaluationsQuery.isPending && (
                 <div className="p-10 text-center">
-                  Loading evaluations...
+                  {t.loading}
                 </div>
               )}
 
@@ -327,7 +333,7 @@ function EvaluationsPageContent() {
                 <div className="p-10 text-center text-red-600">
                   {getApiErrorMessage(
                     evaluationsQuery.error,
-                    "Evaluations could not be loaded.",
+                    common.messages.operationFailed,
                   )}
                 </div>
               )}
@@ -335,7 +341,7 @@ function EvaluationsPageContent() {
               {evaluationsQuery.data?.length ===
                 0 && (
                   <div className="p-10 text-center text-slate-500">
-                    No evaluations were found.
+                    {t.empty}
                   </div>
                 )}
 
@@ -345,28 +351,28 @@ function EvaluationsPageContent() {
                     <thead className="border-b bg-slate-50">
                       <tr>
                         <th className="p-4">
-                          Student
+                          {common.fields.student}
                         </th>
                         <th className="p-4">
-                          Group
+                          {common.fields.group}
                         </th>
                         <th className="p-4">
-                          Template
+                          {t.template}
                         </th>
                         <th className="p-4">
-                          Date
+                          {t.evaluationDate}
                         </th>
                         <th className="p-4">
-                          Score
+                          {common.fields.score}
                         </th>
                         <th className="p-4">
-                          Evaluator
+                          {t.evaluator}
                         </th>
                         <th className="p-4">
-                          Status
+                          {common.fields.status}
                         </th>
                         <th className="p-4">
-                          Actions
+                          {common.fields.actions}
                         </th>
                       </tr>
                     </thead>
@@ -410,9 +416,7 @@ function EvaluationsPageContent() {
                             </td>
 
                             <td className="p-4">
-                              {new Date(
-                                `${evaluation.evaluationDate}T00:00:00`,
-                              ).toLocaleDateString()}
+                              {formatDate(evaluation.evaluationDate)}
                             </td>
 
                             <td className="p-4">
@@ -440,8 +444,8 @@ function EvaluationsPageContent() {
                                 >
                                   {evaluation.status ===
                                     "DRAFT"
-                                    ? "Edit"
-                                    : "View"}
+                                    ? common.actions.edit
+                                    : common.actions.view}
                                 </Link>
 
                                 {canPublish &&
@@ -462,8 +466,8 @@ function EvaluationsPageContent() {
                                     >
                                       {publishingId ===
                                         evaluation.id
-                                        ? "Publishing..."
-                                        : "Publish"}
+                                        ? common.actions.publishing
+                                        : common.actions.publish}
                                     </button>
                                   )}
                               </div>

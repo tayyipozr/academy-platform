@@ -58,7 +58,7 @@ const groupFormSchema = z
       values.minimumAge !== "" &&
       values.maximumAge !== "" &&
       Number(values.maximumAge) <
-        Number(values.minimumAge)
+      Number(values.minimumAge)
     ) {
       context.addIssue({
         code: "custom",
@@ -133,11 +133,18 @@ export function GroupFormDialog({
     });
   }, [group, reset]);
 
+  const {
+    dictionary,
+  } = useLocalization();
+
+  const t = dictionary.pages.groups;
+  const common = dictionary.common;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4">
       <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
         <h2 className="text-xl font-semibold">
-          {group ? "Edit group" : "Create group"}
+          {group ? t.edit : t.create}
         </h2>
 
         <form
@@ -147,12 +154,12 @@ export function GroupFormDialog({
           <div className="grid gap-4 md:grid-cols-2">
             <SelectField
               id="programId"
-              label="Program"
+              label={t.program}
               error={errors.programId?.message}
               registration={register("programId")}
             >
               <option value="">
-                Select a program
+                {common.filters.allPrograms}
               </option>
               {programs
                 .filter(
@@ -171,11 +178,13 @@ export function GroupFormDialog({
 
             <SelectField
               id="termId"
-              label="Term"
+              label={t.term}
               error={errors.termId?.message}
               registration={register("termId")}
             >
-              <option value="">Select a term</option>
+              <option value="">
+                {common.filters.allTerms}
+              </option>
               {terms
                 .filter((term) =>
                   ["DRAFT", "ACTIVE"].includes(
@@ -194,11 +203,13 @@ export function GroupFormDialog({
 
             <SelectField
               id="branchId"
-              label="Branch"
+              label={t.branch}
               error={errors.branchId?.message}
               registration={register("branchId")}
             >
-              <option value="">No branch</option>
+              <option value="">
+                {t.noBranch}
+              </option>
               {branches
                 .filter(
                   (branch) =>
@@ -216,21 +227,21 @@ export function GroupFormDialog({
 
             <TextField
               id="code"
-              label="Group code"
+              label={t.groupCode}
               error={errors.code?.message}
               registration={register("code")}
             />
 
             <TextField
               id="name"
-              label="Group name"
+              label={t.groupName}
               error={errors.name?.message}
               registration={register("name")}
             />
 
             <TextField
               id="capacity"
-              label="Capacity"
+              label={t.capacity}
               type="number"
               error={errors.capacity?.message}
               registration={register("capacity")}
@@ -238,7 +249,7 @@ export function GroupFormDialog({
 
             <TextField
               id="minimumAge"
-              label="Minimum age"
+              label={t.minimumAge}
               type="number"
               error={errors.minimumAge?.message}
               registration={register("minimumAge")}
@@ -246,7 +257,7 @@ export function GroupFormDialog({
 
             <TextField
               id="maximumAge"
-              label="Maximum age"
+              label={t.maximumAge}
               type="number"
               error={errors.maximumAge?.message}
               registration={register("maximumAge")}
@@ -258,7 +269,7 @@ export function GroupFormDialog({
               htmlFor="description"
               className="block text-sm font-medium"
             >
-              Description
+              {common.fields.description}
             </label>
             <textarea
               id="description"
@@ -281,14 +292,16 @@ export function GroupFormDialog({
               disabled={submitting}
               className="rounded-lg border px-4 py-2"
             >
-              Cancel
+              {common.actions.cancel}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
             >
-              {submitting ? "Saving..." : "Save group"}
+              {submitting
+                ? common.actions.saving
+                : common.actions.save}
             </button>
           </footer>
         </form>
@@ -300,6 +313,7 @@ export function GroupFormDialog({
 import type {
   UseFormRegisterReturn,
 } from "react-hook-form";
+import { useLocalization } from "../localization/use-localization";
 
 function TextField({
   id,

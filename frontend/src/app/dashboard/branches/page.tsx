@@ -28,6 +28,9 @@ import type { Branch } from "@/features/branches/types";
 import { ApiError } from "@/lib/api/api-client";
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
+import { useLocalization } from "@/features/localization/use-localization";
+import { useConfirmDialog } from "@/components/confirm-dialog-provider";
+import { StatusBadge } from "@/components/status-badge";
 
 export default function BranchesPage() {
   const router = useRouter();
@@ -64,6 +67,14 @@ export default function BranchesPage() {
     currentUser,
     "branches.manage",
   );
+
+  const confirm = useConfirmDialog();
+
+  const { dictionary, terminology, statusLabel, formatDate } =
+    useLocalization();
+
+  const t = dictionary.pages.branches;
+  const common = dictionary.common;
 
   const branchesQuery = useQuery({
     queryKey:
@@ -181,9 +192,21 @@ export default function BranchesPage() {
   ) {
     const confirmed =
       action === "archive"
-        ? window.confirm(
-            `Archive ${branch.name}?`,
-          )
+        ? await confirm({
+          title:
+            dictionary.common.dialogs
+              .archiveTitle,
+
+          description: `${branch.name}\n\n${dictionary.common.dialogs.archiveDescription}`,
+
+          confirmLabel:
+            dictionary.common.actions.archive,
+
+          cancelLabel:
+            dictionary.common.actions.cancel,
+
+          variant: "warning",
+        })
         : true;
 
     if (!confirmed) {
@@ -209,7 +232,7 @@ export default function BranchesPage() {
       setPageError(
         getApiErrorMessage(
           error,
-          "The branch status could not be updated.",
+          dictionary.common.messages.operationFailed,
         ),
       );
     } finally {
@@ -220,7 +243,7 @@ export default function BranchesPage() {
   if (currentUserQuery.isPending) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100">
-        Loading...
+        { }
       </main>
     );
   }
@@ -236,7 +259,7 @@ export default function BranchesPage() {
 
         <main className="mx-auto max-w-7xl p-6">
           <div className="rounded-xl bg-red-50 p-5 text-red-700">
-            You do not have permission to view branches.
+            {dictionary.common.messages.permissionDenied}
           </div>
         </main>
       </div>
@@ -251,12 +274,11 @@ export default function BranchesPage() {
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">
-              Branches
+              {t.title}
             </h1>
 
             <p className="mt-1 text-slate-600">
-              Manage campuses, offices, and training
-              locations.
+              {t.description}
             </p>
           </div>
 
@@ -266,7 +288,7 @@ export default function BranchesPage() {
               onClick={openCreateDialog}
               className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white"
             >
-              Create branch
+              {t.create}
             </button>
           )}
         </header>
@@ -281,7 +303,7 @@ export default function BranchesPage() {
           />
 
           <span className="text-sm">
-            Include archived branches
+            {dictionary.common.filters.includeArchived}
           </span>
         </label>
 
@@ -294,7 +316,7 @@ export default function BranchesPage() {
         <section className="mt-6 overflow-hidden rounded-xl bg-white shadow-sm">
           {branchesQuery.isPending && (
             <div className="p-10 text-center">
-              Loading branches...
+              {t.loading}
             </div>
           )}
 
@@ -308,7 +330,7 @@ export default function BranchesPage() {
 
           {branchesQuery.data?.length === 0 && (
             <div className="p-10 text-center text-slate-500">
-              No branches were found.
+              {t.empty}
             </div>
           )}
 
@@ -317,11 +339,11 @@ export default function BranchesPage() {
               <table className="w-full min-w-[800px] text-left">
                 <thead className="border-b bg-slate-50">
                   <tr>
-                    <th className="p-4">Branch</th>
-                    <th className="p-4">Location</th>
-                    <th className="p-4">Contact</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4">Actions</th>
+                    <th className="p-4"> {t.title} </th>
+                    <th className="p-4"> {dictionary.common.fields.location} </th>
+                    <th className="p-4"> {t.contact} </th>
+                    <th className="p-4"> {dictionary.common.fields.status} </th>
+                    <th className="p-4"> {dictionary.common.fields.actions} </th>
                   </tr>
                 </thead>
 
@@ -350,7 +372,7 @@ export default function BranchesPage() {
 
                       <td className="p-4">
                         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium">
-                          {branch.status}
+                          <StatusBadge status={branch.status} />
                         </span>
                       </td>
 
@@ -364,48 +386,48 @@ export default function BranchesPage() {
                               }
                               className="rounded border px-3 py-1.5 text-sm"
                             >
-                              Edit
+                              {dictionary.common.actions.edit}
                             </button>
 
                             {branch.status !==
                               "ARCHIVED" && (
-                              <button
-                                type="button"
-                                disabled={
-                                  updatingBranchId ===
-                                  branch.id
-                                }
-                                onClick={() =>
-                                  changeStatus(
-                                    branch,
-                                    "archive",
-                                  )
-                                }
-                                className="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700"
-                              >
-                                Archive
-                              </button>
-                            )}
+                                <button
+                                  type="button"
+                                  disabled={
+                                    updatingBranchId ===
+                                    branch.id
+                                  }
+                                  onClick={() =>
+                                    changeStatus(
+                                      branch,
+                                      "archive",
+                                    )
+                                  }
+                                  className="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700"
+                                >
+                                  {dictionary.common.actions.archive}
+                                </button>
+                              )}
 
                             {branch.status ===
                               "ARCHIVED" && (
-                              <button
-                                type="button"
-                                disabled={
-                                  updatingBranchId ===
-                                  branch.id
-                                }
-                                onClick={() =>
-                                  changeStatus(
-                                    branch,
-                                    "activate",
-                                  )
-                                }
-                                className="rounded border border-green-300 px-3 py-1.5 text-sm text-green-700"
-                              >
-                                Activate
-                              </button>
-                            )}
+                                <button
+                                  type="button"
+                                  disabled={
+                                    updatingBranchId ===
+                                    branch.id
+                                  }
+                                  onClick={() =>
+                                    changeStatus(
+                                      branch,
+                                      "activate",
+                                    )
+                                  }
+                                  className="rounded border border-green-300 px-3 py-1.5 text-sm text-green-700"
+                                >
+                                  {dictionary.common.actions.activate}
+                                </button>
+                              )}
                           </div>
                         )}
                       </td>

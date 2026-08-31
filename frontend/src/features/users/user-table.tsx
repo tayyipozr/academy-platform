@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocalization } from "../localization/use-localization";
 import type { OrganizationUser } from "./types";
 import { UserStatusBadge } from "./user-status-badge";
 
@@ -32,34 +33,42 @@ export function UserTable({
     );
   }
 
+  const {
+    dictionary,
+    statusLabel,
+    formatDateTime,
+  } = useLocalization();
+
+  const t = dictionary.pages.users;
+  const common = dictionary.common;
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[900px] text-left">
         <thead className="border-b border-slate-200 bg-slate-50">
           <tr>
             <th className="px-5 py-3 text-sm font-semibold">
-              User
+              {t.user}
             </th>
 
             <th className="px-5 py-3 text-sm font-semibold">
-              Roles
+              {t.roles}
             </th>
 
             <th className="px-5 py-3 text-sm font-semibold">
-              Status
+              {common.fields.status}
             </th>
 
             <th className="px-5 py-3 text-sm font-semibold">
-              Joined
+              {common.actions.joined}
             </th>
 
             <th className="px-5 py-3 text-sm font-semibold">
-              Last login
+              {t.lastLogin}
             </th>
 
             <th className="px-5 py-3 text-sm font-semibold">
-              Actions
-            </th>
+              {common.fields.actions}            </th>
           </tr>
         </thead>
 
@@ -116,10 +125,8 @@ export function UserTable({
 
                 <td className="px-5 py-4 text-sm text-slate-600">
                   {user.lastLoginAt
-                    ? new Date(
-                        user.lastLoginAt,
-                      ).toLocaleString()
-                    : "Never"}
+                    ? formatDateTime(user.lastLoginAt)
+                    : t.neverLoggedIn}
                 </td>
 
                 <td className="px-5 py-4">
@@ -130,7 +137,7 @@ export function UserTable({
                         onClick={() => onEdit(user)}
                         className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100"
                       >
-                        Edit
+                        {common.actions.edit}
                       </button>
                     )}
 
@@ -144,8 +151,8 @@ export function UserTable({
                           className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
                         >
                           {statusUpdating
-                            ? "Updating..."
-                            : "Suspend"}
+                            ? common.actions.updating
+                            : common.actions.suspend}
                         </button>
                       )}
 
@@ -158,8 +165,8 @@ export function UserTable({
                           className="rounded-lg border border-green-300 px-3 py-1.5 text-sm text-green-700 hover:bg-green-50 disabled:opacity-50"
                         >
                           {statusUpdating
-                            ? "Updating..."
-                            : "Reactivate"}
+                            ? common.actions.updating
+                            : common.actions.reactivate}
                         </button>
                       )}
                   </div>

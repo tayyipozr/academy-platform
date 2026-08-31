@@ -1,38 +1,23 @@
 "use client";
 
 import { useParams } from "next/navigation";
-
 import { useQuery } from "@tanstack/react-query";
 
 import { DashboardHeader } from "@/components/dashboard-header";
 import { getCurrentUser } from "@/features/auth/api";
-
-import {
-    getStudentEvaluation,
-} from "@/features/evaluations/api";
-
-import {
-    EvaluationEditor,
-} from "@/features/evaluations/evaluation-editor";
-
-import {
-    evaluationQueryKeys,
-} from "@/features/evaluations/query-keys";
-
+import { getStudentEvaluation } from "@/features/evaluations/api";
+import { EvaluationEditor } from "@/features/evaluations/evaluation-editor";
+import { evaluationQueryKeys } from "@/features/evaluations/query-keys";
+import { MediaGallery } from "@/features/media/media-gallery";
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
 
-import {
-    MediaGallery,
-} from "@/features/media/media-gallery";
-
 export default function EvaluationDetailPage() {
-    const parameters = useParams<{
+    const params = useParams<{
         evaluationId: string;
     }>();
 
-    const evaluationId =
-        parameters.evaluationId;
+    const evaluationId = params.evaluationId;
 
     const currentUserQuery = useQuery({
         queryKey: ["current-user"],
@@ -56,6 +41,11 @@ export default function EvaluationDetailPage() {
         "evaluations.publish",
     );
 
+    const canReadMedia = hasPermission(
+        currentUser,
+        "media.read",
+    );
+
     const evaluationQuery = useQuery({
         queryKey:
             evaluationQueryKeys.evaluationDetail(
@@ -69,17 +59,27 @@ export default function EvaluationDetailPage() {
             currentUserQuery.isSuccess &&
             canRead &&
             Boolean(evaluationId),
+
+        retry: false,
     });
 
     if (
         currentUserQuery.isPending ||
         evaluationQuery.isPending
     ) {
-        return <main className="p-8">Loading...</main>;
+        return (
+            <main className="flex min-h-screen items-center justify-center bg-slate-100">
+                Loading evaluation...
+            </main>
+        );
     }
 
     if (!currentUser) {
-        return null;
+        return (
+            <main className="flex min-h-screen items-center justify-center bg-slate-100">
+                Your session could not be loaded.
+            </main>
+        );
     }
 
     if (!canRead) {
@@ -107,15 +107,27 @@ export default function EvaluationDetailPage() {
 
                 <main className="mx-auto max-w-7xl p-6">
                     <div className="rounded-xl bg-red-50 p-5 text-red-700">
-                        {getApiErrorMessage(
-                            evaluationQuery.error,
-                            "The evaluation could not be loaded.",
-                        )}
+                        <h1 className="font-semibold">
+                            Evaluation could not be loaded
+                        </h1>
+
+                        <p className="mt-2">
+                            {getApiErrorMessage(
+                                evaluationQuery.error,
+                                "The evaluation does not exist or you do not have access.",
+                            )}
+                        </p>
+
+                        <p className="mt-2 text-sm">
+                            Evaluation ID: {evaluationId}
+                        </p>
                     </div>
                 </main>
             </div>
         );
     }
+
+    const evaluation = evaluationQuery.data;
 
     return (
         <div className="min-h-screen bg-slate-100">
@@ -128,27 +140,25 @@ export default function EvaluationDetailPage() {
                     </h1>
 
                     <p className="mt-1 text-slate-600">
-                        {evaluationQuery.data.studentFirstName}{" "}
-                        {evaluationQuery.data.studentLastName} ·{" "}
-                        {evaluationQuery.data.groupName}
+                        {evaluation.studentFirstName}{" "}
+                        {evaluation.studentLastName} ·{" "}
+                        {evaluation.groupName}
                     </p>
                 </header>
 
                 <EvaluationEditor
-                    key={`${evaluationQuery.data.id}-${evaluationQuery.data.status}-${evaluationQuery.data.updatedAt}`}
-                    initialEvaluation={
-                        evaluationQuery.data
-                    }
+                    key={`${evaluation.id}-${evaluation.status}-${evaluation.updatedAt}`}
+                    initialEvaluation={evaluation}
                     canManage={canManage}
                     canPublish={canPublish}
                 />
 
-                {hasPermission(currentUser, "media.read") && (
+                {canReadMedia && (
                     <div className="mt-8">
                         <MediaGallery
                             target={{
                                 type: "EVALUATION",
-                                id: evaluationQuery.data.id,
+                                id: evaluation.id,
                             }}
                             title="Evaluation attachments"
                             canUpload={hasPermission(

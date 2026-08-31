@@ -10,8 +10,17 @@ import {
     useQueryClient,
 } from "@tanstack/react-query";
 
-import { DashboardHeader } from "@/components/dashboard-header";
-import { getCurrentUser } from "@/features/auth/api";
+import {
+    useConfirmDialog,
+} from "@/components/confirm-dialog-provider";
+
+import {
+    DashboardHeader,
+} from "@/components/dashboard-header";
+
+import {
+    getCurrentUser,
+} from "@/features/auth/api";
 
 import {
     createCurriculumUnit,
@@ -24,21 +33,42 @@ import {
     updateLearningOutcome,
 } from "@/features/curricula/api";
 
-import { OutcomeFormDialog } from "@/features/curricula/outcome-form-dialog";
-import type { OutcomeFormValues } from "@/features/curricula/outcome-form-schema";
+import {
+    OutcomeFormDialog,
+} from "@/features/curricula/outcome-form-dialog";
 
-import { curriculumQueryKeys } from "@/features/curricula/query-keys";
+import type {
+    OutcomeFormValues,
+} from "@/features/curricula/outcome-form-schema";
 
-import { UnitFormDialog } from "@/features/curricula/unit-form-dialog";
-import type { UnitFormValues } from "@/features/curricula/unit-form-schema";
+import {
+    curriculumQueryKeys,
+} from "@/features/curricula/query-keys";
+
+import {
+    UnitFormDialog,
+} from "@/features/curricula/unit-form-dialog";
+
+import type {
+    UnitFormValues,
+} from "@/features/curricula/unit-form-schema";
 
 import type {
     CurriculumUnit,
     LearningOutcome,
 } from "@/features/curricula/types";
 
-import { getApiErrorMessage } from "@/lib/api/error-message";
-import { hasPermission } from "@/lib/permissions";
+import {
+    useLocalization,
+} from "@/features/localization/use-localization";
+
+import {
+    getApiErrorMessage,
+} from "@/lib/api/error-message";
+
+import {
+    hasPermission,
+} from "@/lib/permissions";
 
 type DialogState =
     | {
@@ -61,6 +91,15 @@ export default function CurriculumDetailPage() {
         parameters.curriculumId;
 
     const queryClient = useQueryClient();
+    const confirm = useConfirmDialog();
+
+    const {
+        dictionary,
+        statusLabel,
+    } = useLocalization();
+
+    const t = dictionary.pages.curricula;
+    const common = dictionary.common;
 
     const [selectedUnitId, setSelectedUnitId] =
         useState<string | null>(null);
@@ -93,26 +132,37 @@ export default function CurriculumDetailPage() {
 
     const curriculumQuery = useQuery({
         queryKey:
-            curriculumQueryKeys.detail(curriculumId),
+            curriculumQueryKeys.detail(
+                curriculumId,
+            ),
+
         queryFn: () =>
             getCurriculum(curriculumId),
+
         enabled:
-            currentUserQuery.isSuccess && canRead,
+            currentUserQuery.isSuccess &&
+            canRead,
     });
 
     const unitsQuery = useQuery({
         queryKey:
-            curriculumQueryKeys.units(curriculumId),
+            curriculumQueryKeys.units(
+                curriculumId,
+            ),
+
         queryFn: () =>
             getCurriculumUnits(curriculumId),
+
         enabled:
-            currentUserQuery.isSuccess && canRead,
+            currentUserQuery.isSuccess &&
+            canRead,
     });
 
     const selectedUnit = useMemo(
         () =>
             unitsQuery.data?.find(
-                (unit) => unit.id === selectedUnitId,
+                (unit) =>
+                    unit.id === selectedUnitId,
             ) ?? null,
         [selectedUnitId, unitsQuery.data],
     );
@@ -123,11 +173,13 @@ export default function CurriculumDetailPage() {
                 curriculumId,
                 selectedUnitId ?? "",
             ),
+
         queryFn: () =>
             getLearningOutcomes(
                 curriculumId,
                 selectedUnitId!,
             ),
+
         enabled:
             Boolean(selectedUnitId) &&
             currentUserQuery.isSuccess &&
@@ -215,34 +267,40 @@ export default function CurriculumDetailPage() {
         updateOutcomeMutation.isPending;
 
     async function refreshStructure() {
-        await Promise.all([
+        const invalidations = [
             queryClient.invalidateQueries({
                 queryKey:
                     curriculumQueryKeys.detail(
                         curriculumId,
                     ),
             }),
+
             queryClient.invalidateQueries({
                 queryKey:
                     curriculumQueryKeys.units(
                         curriculumId,
                     ),
             }),
+
             queryClient.invalidateQueries({
                 queryKey:
                     curriculumQueryKeys.all,
             }),
-        ]);
+        ];
 
         if (selectedUnitId) {
-            await queryClient.invalidateQueries({
-                queryKey:
-                    curriculumQueryKeys.outcomes(
-                        curriculumId,
-                        selectedUnitId,
-                    ),
-            });
+            invalidations.push(
+                queryClient.invalidateQueries({
+                    queryKey:
+                        curriculumQueryKeys.outcomes(
+                            curriculumId,
+                            selectedUnitId,
+                        ),
+                }),
+            );
         }
+
+        await Promise.all(invalidations);
     }
 
     async function saveUnit(
@@ -255,16 +313,23 @@ export default function CurriculumDetailPage() {
         const request = {
             parentUnitId:
                 values.parentUnitId || null,
+
             code: values.code,
             title: values.title,
-            description: values.description || null,
+
+            description:
+                values.description || null,
+
             sequenceNumber: Number(
                 values.sequenceNumber,
             ),
+
             estimatedSessions:
                 values.estimatedSessions === ""
                     ? null
-                    : Number(values.estimatedSessions),
+                    : Number(
+                        values.estimatedSessions,
+                    ),
         };
 
         setDialogError(null);
@@ -282,12 +347,13 @@ export default function CurriculumDetailPage() {
             }
 
             await refreshStructure();
+
             setDialog(null);
         } catch (error) {
             setDialogError(
                 getApiErrorMessage(
                     error,
-                    "The curriculum unit could not be saved.",
+                    t.unitSaveError,
                 ),
             );
         }
@@ -300,10 +366,15 @@ export default function CurriculumDetailPage() {
             return;
         }
 
+        const activeDialog = dialog;
+
         const request = {
             code: values.code,
             title: values.title,
-            description: values.description || null,
+
+            description:
+                values.description || null,
+
             sequenceNumber: Number(
                 values.sequenceNumber,
             ),
@@ -312,15 +383,16 @@ export default function CurriculumDetailPage() {
         setDialogError(null);
 
         try {
-            if (dialog.outcome) {
+            if (activeDialog.outcome) {
                 await updateOutcomeMutation.mutateAsync({
-                    unitId: dialog.unit.id,
-                    outcomeId: dialog.outcome.id,
+                    unitId: activeDialog.unit.id,
+                    outcomeId:
+                        activeDialog.outcome.id,
                     request,
                 });
             } else {
                 await createOutcomeMutation.mutateAsync({
-                    unitId: dialog.unit.id,
+                    unitId: activeDialog.unit.id,
                     request,
                 });
             }
@@ -331,7 +403,7 @@ export default function CurriculumDetailPage() {
                 queryKey:
                     curriculumQueryKeys.outcomes(
                         curriculumId,
-                        dialog.unit.id,
+                        activeDialog.unit.id,
                     ),
             });
 
@@ -340,16 +412,26 @@ export default function CurriculumDetailPage() {
             setDialogError(
                 getApiErrorMessage(
                     error,
-                    "The learning outcome could not be saved.",
+                    t.outcomeSaveError,
                 ),
             );
         }
     }
 
     async function activateCurriculum() {
-        const confirmed = window.confirm(
-            "Activate this curriculum? Its structure can no longer be edited.",
-        );
+        const confirmed = await confirm({
+            title: t.activateConfirmTitle,
+
+            description:
+                t.activateConfirmDescription,
+
+            confirmLabel: t.activate,
+
+            cancelLabel:
+                common.actions.cancel,
+
+            variant: "warning",
+        });
 
         if (!confirmed) {
             return;
@@ -359,27 +441,89 @@ export default function CurriculumDetailPage() {
 
         try {
             await activateMutation.mutateAsync();
+
             await refreshStructure();
         } catch (error) {
             setPageError(
                 getApiErrorMessage(
                     error,
-                    "The curriculum could not be activated.",
+                    t.activationError,
                 ),
             );
         }
+    }
+
+    function openCreateUnitDialog() {
+        setDialogError(null);
+
+        setDialog({
+            type: "unit",
+        });
+    }
+
+    function openEditUnitDialog(
+        unit: CurriculumUnit,
+    ) {
+        setDialogError(null);
+
+        setDialog({
+            type: "unit",
+            unit,
+        });
+    }
+
+    function openCreateOutcomeDialog(
+        unit: CurriculumUnit,
+    ) {
+        setSelectedUnitId(unit.id);
+        setDialogError(null);
+
+        setDialog({
+            type: "outcome",
+            unit,
+        });
+    }
+
+    function openEditOutcomeDialog(
+        unit: CurriculumUnit,
+        outcome: LearningOutcome,
+    ) {
+        setSelectedUnitId(unit.id);
+        setDialogError(null);
+
+        setDialog({
+            type: "outcome",
+            unit,
+            outcome,
+        });
+    }
+
+    function closeDialog() {
+        if (dialogSubmitting) {
+            return;
+        }
+
+        setDialog(null);
+        setDialogError(null);
     }
 
     if (
         currentUserQuery.isPending ||
         curriculumQuery.isPending
     ) {
-        return <main className="p-8">Loading...</main>;
+        return (
+            <main className="flex min-h-screen items-center justify-center bg-slate-100 p-8">
+                <p className="text-slate-600">
+                    {t.loading}
+                </p>
+            </main>
+        );
     }
 
     if (!currentUser) {
         return null;
     }
+
     if (!canRead) {
         return (
             <div className="min-h-screen bg-slate-100">
@@ -387,8 +531,10 @@ export default function CurriculumDetailPage() {
 
                 <main className="mx-auto max-w-7xl p-6">
                     <div className="rounded-xl bg-red-50 p-5 text-red-700">
-                        You do not have permission to view this
-                        curriculum.
+                        {
+                            common.messages
+                                .permissionDenied
+                        }
                     </div>
                 </main>
             </div>
@@ -407,7 +553,7 @@ export default function CurriculumDetailPage() {
                     <div className="rounded-xl bg-red-50 p-5 text-red-700">
                         {getApiErrorMessage(
                             curriculumQuery.error,
-                            "The curriculum could not be loaded.",
+                            t.loadError,
                         )}
                     </div>
                 </main>
@@ -420,57 +566,8 @@ export default function CurriculumDetailPage() {
     const outcomes = outcomesQuery.data ?? [];
 
     const structureEditable =
-        canManage && curriculum.status === "DRAFT";
-
-    function openCreateUnitDialog() {
-        setDialogError(null);
-        setDialog({
-            type: "unit",
-        });
-    }
-
-    function openEditUnitDialog(
-        unit: CurriculumUnit,
-    ) {
-        setDialogError(null);
-        setDialog({
-            type: "unit",
-            unit,
-        });
-    }
-
-    function openCreateOutcomeDialog(
-        unit: CurriculumUnit,
-    ) {
-        setSelectedUnitId(unit.id);
-        setDialogError(null);
-        setDialog({
-            type: "outcome",
-            unit,
-        });
-    }
-
-    function openEditOutcomeDialog(
-        unit: CurriculumUnit,
-        outcome: LearningOutcome,
-    ) {
-        setSelectedUnitId(unit.id);
-        setDialogError(null);
-        setDialog({
-            type: "outcome",
-            unit,
-            outcome,
-        });
-    }
-
-    function closeDialog() {
-        if (dialogSubmitting) {
-            return;
-        }
-
-        setDialog(null);
-        setDialogError(null);
-    }
+        canManage &&
+        curriculum.status === "DRAFT";
 
     return (
         <div className="min-h-screen bg-slate-100">
@@ -481,7 +578,7 @@ export default function CurriculumDetailPage() {
                     href="/dashboard/curricula"
                     className="text-sm font-medium text-blue-700 hover:underline"
                 >
-                    ← Back to curricula
+                    ← {t.backToList}
                 </Link>
 
                 <header className="mt-4 flex flex-wrap items-start justify-between gap-4">
@@ -497,34 +594,37 @@ export default function CurriculumDetailPage() {
                         </div>
 
                         <p className="mt-1 text-slate-600">
-                            {curriculum.code} · Version{" "}
+                            {curriculum.code} ·{" "}
+                            {common.fields.version}{" "}
                             {curriculum.versionLabel}
                         </p>
 
                         <p className="mt-1 text-sm text-slate-500">
-                            Program: {curriculum.programName}
+                            {common.fields.program}:{" "}
+                            {curriculum.programName}
                         </p>
                     </div>
 
-                    {canManage &&
-                        curriculum.status === "DRAFT" && (
-                            <button
-                                type="button"
-                                disabled={activateMutation.isPending}
-                                onClick={activateCurriculum}
-                                className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700 disabled:opacity-50"
-                            >
-                                {activateMutation.isPending
-                                    ? "Activating..."
-                                    : "Activate curriculum"}
-                            </button>
-                        )}
+                    {structureEditable && (
+                        <button
+                            type="button"
+                            disabled={
+                                activateMutation.isPending
+                            }
+                            onClick={activateCurriculum}
+                            className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
+                        >
+                            {activateMutation.isPending
+                                ? t.activating
+                                : t.activate}
+                        </button>
+                    )}
                 </header>
 
                 {curriculum.description && (
                     <section className="mt-6 rounded-xl bg-white p-6 shadow-sm">
                         <h2 className="text-lg font-semibold">
-                            Description
+                            {common.fields.description}
                         </h2>
 
                         <p className="mt-3 whitespace-pre-wrap text-slate-700">
@@ -535,30 +635,38 @@ export default function CurriculumDetailPage() {
 
                 <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <SummaryCard
-                        label="Program"
+                        label={common.fields.program}
                         value={curriculum.programName}
                     />
 
                     <SummaryCard
-                        label="Units"
+                        label={t.units}
                         value={curriculum.unitCount.toString()}
                     />
 
                     <SummaryCard
-                        label="Learning outcomes"
+                        label={t.learningOutcomes}
                         value={curriculum.outcomeCount.toString()}
                     />
 
                     <SummaryCard
-                        label="Estimated sessions"
-                        value={curriculum.estimatedSessionCount.toString()}
+                        label={t.estimatedSessions}
+                        value={
+                            curriculum.estimatedSessionCount.toString()
+                        }
                     />
                 </section>
 
                 {curriculum.status !== "DRAFT" && (
                     <div className="mt-6 rounded-lg bg-blue-50 p-4 text-sm text-blue-800">
-                        This curriculum is {curriculum.status.toLowerCase()}.
-                        Its units and learning outcomes are read-only.
+                        {formatMessage(
+                            t.readOnlyMessage,
+                            {
+                                status: statusLabel(
+                                    curriculum.status,
+                                ).toLowerCase(),
+                            },
+                        )}
                     </div>
                 )}
 
@@ -576,28 +684,30 @@ export default function CurriculumDetailPage() {
                         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 p-6">
                             <div>
                                 <h2 className="text-lg font-semibold">
-                                    Curriculum units
+                                    {t.units}
                                 </h2>
 
                                 <p className="mt-1 text-sm text-slate-600">
-                                    Define the ordered instructional structure.
+                                    {t.unitsDescription}
                                 </p>
                             </div>
 
                             {structureEditable && (
                                 <button
                                     type="button"
-                                    onClick={openCreateUnitDialog}
-                                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+                                    onClick={
+                                        openCreateUnitDialog
+                                    }
+                                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
                                 >
-                                    Create unit
+                                    {t.createUnit}
                                 </button>
                             )}
                         </header>
 
                         {unitsQuery.isPending && (
                             <div className="p-8 text-center text-slate-500">
-                                Loading curriculum units...
+                                {t.loadingUnits}
                             </div>
                         )}
 
@@ -605,7 +715,7 @@ export default function CurriculumDetailPage() {
                             <div className="p-8 text-center text-red-600">
                                 {getApiErrorMessage(
                                     unitsQuery.error,
-                                    "The curriculum units could not be loaded.",
+                                    t.unitsLoadError,
                                 )}
                             </div>
                         )}
@@ -614,8 +724,7 @@ export default function CurriculumDetailPage() {
                             !unitsQuery.isError &&
                             units.length === 0 && (
                                 <div className="p-8 text-center text-slate-500">
-                                    This curriculum does not contain any units
-                                    yet.
+                                    {t.noUnits}
                                 </div>
                             )}
 
@@ -636,7 +745,9 @@ export default function CurriculumDetailPage() {
                                             <button
                                                 type="button"
                                                 onClick={() =>
-                                                    setSelectedUnitId(unit.id)
+                                                    setSelectedUnitId(
+                                                        unit.id,
+                                                    )
                                                 }
                                                 className="w-full text-left"
                                             >
@@ -644,7 +755,9 @@ export default function CurriculumDetailPage() {
                                                     <div>
                                                         <div className="flex flex-wrap items-center gap-2">
                                                             <span className="rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
-                                                                {unit.sequenceNumber}
+                                                                {
+                                                                    unit.sequenceNumber
+                                                                }
                                                             </span>
 
                                                             <h3 className="font-semibold text-slate-900">
@@ -658,13 +771,22 @@ export default function CurriculumDetailPage() {
 
                                                         {unit.parentUnitTitle && (
                                                             <p className="mt-1 text-xs text-slate-500">
-                                                                Parent: {unit.parentUnitTitle}
+                                                                {t.parentUnit}:{" "}
+                                                                {
+                                                                    unit.parentUnitTitle
+                                                                }
                                                             </p>
                                                         )}
                                                     </div>
 
                                                     <span className="text-sm text-slate-500">
-                                                        {unit.outcomeCount} outcomes
+                                                        {formatMessage(
+                                                            t.outcomeCount,
+                                                            {
+                                                                count:
+                                                                    unit.outcomeCount,
+                                                            },
+                                                        )}
                                                     </span>
                                                 </div>
 
@@ -676,8 +798,9 @@ export default function CurriculumDetailPage() {
 
                                                 <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
                                                     <span>
-                                                        Estimated sessions:{" "}
-                                                        {unit.estimatedSessions ?? "—"}
+                                                        {t.estimatedSessions}:{" "}
+                                                        {unit.estimatedSessions ??
+                                                            "—"}
                                                     </span>
                                                 </div>
                                             </button>
@@ -687,21 +810,25 @@ export default function CurriculumDetailPage() {
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            openEditUnitDialog(unit)
+                                                            openEditUnitDialog(
+                                                                unit,
+                                                            )
                                                         }
                                                         className="rounded border border-slate-300 px-3 py-1.5 text-sm"
                                                     >
-                                                        Edit unit
+                                                        {t.editUnit}
                                                     </button>
 
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            openCreateOutcomeDialog(unit)
+                                                            openCreateOutcomeDialog(
+                                                                unit,
+                                                            )
                                                         }
                                                         className="rounded border border-blue-300 px-3 py-1.5 text-sm text-blue-700"
                                                     >
-                                                        Add outcome
+                                                        {t.addOutcome}
                                                     </button>
                                                 </div>
                                             )}
@@ -715,26 +842,32 @@ export default function CurriculumDetailPage() {
                     <section className="overflow-hidden rounded-xl bg-white shadow-sm">
                         <header className="border-b border-slate-200 p-6">
                             <h2 className="text-lg font-semibold">
-                                Learning outcomes
+                                {t.learningOutcomes}
                             </h2>
 
                             <p className="mt-1 text-sm text-slate-600">
                                 {selectedUnit
-                                    ? `Outcomes for ${selectedUnit.title}`
-                                    : "Select a curriculum unit to view its outcomes."}
+                                    ? formatMessage(
+                                        t.outcomesFor,
+                                        {
+                                            unit:
+                                                selectedUnit.title,
+                                        },
+                                    )
+                                    : t.selectUnitPrompt}
                             </p>
                         </header>
 
                         {!selectedUnit && (
                             <div className="p-8 text-center text-slate-500">
-                                Select a curriculum unit from the left panel.
+                                {t.selectUnitFromLeft}
                             </div>
                         )}
 
                         {selectedUnit &&
                             outcomesQuery.isPending && (
                                 <div className="p-8 text-center text-slate-500">
-                                    Loading learning outcomes...
+                                    {t.loadingOutcomes}
                                 </div>
                             )}
 
@@ -743,7 +876,7 @@ export default function CurriculumDetailPage() {
                                 <div className="p-8 text-center text-red-600">
                                     {getApiErrorMessage(
                                         outcomesQuery.error,
-                                        "The learning outcomes could not be loaded.",
+                                        t.outcomesLoadError,
                                     )}
                                 </div>
                             )}
@@ -753,8 +886,7 @@ export default function CurriculumDetailPage() {
                             !outcomesQuery.isError &&
                             outcomes.length === 0 && (
                                 <div className="p-8 text-center text-slate-500">
-                                    This unit does not contain any learning
-                                    outcomes yet.
+                                    <p>{t.noOutcomes}</p>
 
                                     {structureEditable && (
                                         <div className="mt-4">
@@ -767,7 +899,7 @@ export default function CurriculumDetailPage() {
                                                 }
                                                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white"
                                             >
-                                                Create learning outcome
+                                                {t.createOutcome}
                                             </button>
                                         </div>
                                     )}
@@ -777,51 +909,59 @@ export default function CurriculumDetailPage() {
                         {selectedUnit &&
                             outcomes.length > 0 && (
                                 <div className="divide-y divide-slate-200">
-                                    {outcomes.map((outcome) => (
-                                        <article
-                                            key={outcome.id}
-                                            className="p-5"
-                                        >
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div>
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <span className="rounded bg-slate-100 px-2 py-1 text-xs font-medium">
-                                                            {outcome.sequenceNumber}
-                                                        </span>
+                                    {outcomes.map(
+                                        (outcome) => (
+                                            <article
+                                                key={outcome.id}
+                                                className="p-5"
+                                            >
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div>
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <span className="rounded bg-slate-100 px-2 py-1 text-xs font-medium">
+                                                                {
+                                                                    outcome.sequenceNumber
+                                                                }
+                                                            </span>
 
-                                                        <h3 className="font-medium text-slate-900">
-                                                            {outcome.title}
-                                                        </h3>
+                                                            <h3 className="font-medium text-slate-900">
+                                                                {outcome.title}
+                                                            </h3>
+                                                        </div>
+
+                                                        <p className="mt-1 text-sm text-slate-500">
+                                                            {outcome.code}
+                                                        </p>
                                                     </div>
 
-                                                    <p className="mt-1 text-sm text-slate-500">
-                                                        {outcome.code}
-                                                    </p>
+                                                    {structureEditable && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                openEditOutcomeDialog(
+                                                                    selectedUnit,
+                                                                    outcome,
+                                                                )
+                                                            }
+                                                            className="rounded border border-slate-300 px-3 py-1.5 text-sm"
+                                                        >
+                                                            {
+                                                                common.actions.edit
+                                                            }
+                                                        </button>
+                                                    )}
                                                 </div>
 
-                                                {structureEditable && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            openEditOutcomeDialog(
-                                                                selectedUnit,
-                                                                outcome,
-                                                            )
+                                                {outcome.description && (
+                                                    <p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">
+                                                        {
+                                                            outcome.description
                                                         }
-                                                        className="rounded border border-slate-300 px-3 py-1.5 text-sm"
-                                                    >
-                                                        Edit
-                                                    </button>
+                                                    </p>
                                                 )}
-                                            </div>
-
-                                            {outcome.description && (
-                                                <p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">
-                                                    {outcome.description}
-                                                </p>
-                                            )}
-                                        </article>
-                                    ))}
+                                            </article>
+                                        ),
+                                    )}
                                 </div>
                             )}
                     </section>
@@ -843,7 +983,8 @@ export default function CurriculumDetailPage() {
                 <OutcomeFormDialog
                     outcome={dialog.outcome}
                     currentOutcomeCount={
-                        dialog.unit.id === selectedUnitId
+                        dialog.unit.id ===
+                            selectedUnitId
                             ? outcomes.length
                             : dialog.unit.outcomeCount
                     }
@@ -882,17 +1023,39 @@ function CurriculumStatusBadge({
 }: {
     status: "DRAFT" | "ACTIVE" | "ARCHIVED";
 }) {
+    const {
+        statusLabel,
+    } = useLocalization();
+
     const styles = {
         DRAFT: "bg-amber-100 text-amber-700",
         ACTIVE: "bg-green-100 text-green-700",
-        ARCHIVED: "bg-slate-200 text-slate-700",
+        ARCHIVED:
+            "bg-slate-200 text-slate-700",
     } as const;
 
     return (
         <span
             className={`rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}
         >
-            {status}
+            {statusLabel(status)}
         </span>
+    );
+}
+
+function formatMessage(
+    message: string,
+    values: Record<
+        string,
+        string | number
+    >,
+): string {
+    return Object.entries(values).reduce(
+        (result, [key, value]) =>
+            result.replaceAll(
+                `{${key}}`,
+                String(value),
+            ),
+        message,
     );
 }

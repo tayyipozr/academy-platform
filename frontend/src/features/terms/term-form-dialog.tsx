@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
 import type { OperationalTerm } from "./types";
+import { useLocalization } from "../localization/use-localization";
 
 const termFormSchema = z
   .object({
@@ -93,6 +94,13 @@ export function TermFormDialog({
     });
   }, [reset, term]);
 
+  const {
+    dictionary,
+  } = useLocalization();
+
+  const t = dictionary.pages.terms;
+  const common = dictionary.common;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
@@ -102,7 +110,7 @@ export function TermFormDialog({
       <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-xl">
         <header className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">
-            {term ? "Edit term" : "Create term"}
+            {term ? t.edit : t.create}
           </h2>
 
           <button
@@ -110,7 +118,7 @@ export function TermFormDialog({
             disabled={submitting}
             onClick={onClose}
           >
-            Close
+            {common.actions.close}
           </button>
         </header>
 
@@ -120,7 +128,7 @@ export function TermFormDialog({
         >
           <InputField
             id="code"
-            label="Term code"
+            label={t.termCode}
             error={errors.code?.message}
           >
             <input
@@ -132,7 +140,7 @@ export function TermFormDialog({
 
           <InputField
             id="name"
-            label="Term name"
+            label={t.termName}
             error={errors.name?.message}
           >
             <input
@@ -145,7 +153,7 @@ export function TermFormDialog({
           <div className="grid gap-4 md:grid-cols-2">
             <InputField
               id="startDate"
-              label="Start date"
+              label={t.startDate}
               error={errors.startDate?.message}
             >
               <input
@@ -158,7 +166,7 @@ export function TermFormDialog({
 
             <InputField
               id="endDate"
-              label="End date"
+              label={t.endDate}
               error={errors.endDate?.message}
             >
               <input
@@ -183,7 +191,7 @@ export function TermFormDialog({
               disabled={submitting}
               className="rounded-lg border px-4 py-2"
             >
-              Cancel
+              {common.actions.cancel}
             </button>
 
             <button
@@ -191,7 +199,9 @@ export function TermFormDialog({
               disabled={submitting}
               className="rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
             >
-              {submitting ? "Saving..." : "Save term"}
+              {submitting
+                ? common.actions.saving
+                : common.actions.save}
             </button>
           </footer>
         </form>

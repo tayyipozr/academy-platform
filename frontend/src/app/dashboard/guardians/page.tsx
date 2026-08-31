@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
+
+import {
+  useRouter,
+} from "next/navigation";
 
 import {
   useMutation,
@@ -9,8 +16,17 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
-import { DashboardHeader } from "@/components/dashboard-header";
-import { getCurrentUser } from "@/features/auth/api";
+import {
+  useConfirmDialog,
+} from "@/components/confirm-dialog-provider";
+
+import {
+  DashboardHeader,
+} from "@/components/dashboard-header";
+
+import {
+  getCurrentUser,
+} from "@/features/auth/api";
 
 import {
   createGuardian,
@@ -19,36 +35,77 @@ import {
   updateGuardianStatus,
 } from "@/features/guardians/api";
 
-import { GuardianFormDialog } from "@/features/guardians/guardian-form-dialog";
-import type { GuardianFormValues } from "@/features/guardians/guardian-form-schema";
-import { guardianQueryKeys } from "@/features/guardians/query-keys";
+import {
+  GuardianFormDialog,
+} from "@/features/guardians/guardian-form-dialog";
+
+import type {
+  GuardianFormValues,
+} from "@/features/guardians/guardian-form-schema";
+
+import {
+  guardianQueryKeys,
+} from "@/features/guardians/query-keys";
 
 import type {
   Guardian,
   GuardianStatus,
 } from "@/features/guardians/types";
 
-import { getAssignableAccounts } from "@/features/people/api";
-import { peopleQueryKeys } from "@/features/people/query-keys";
+import {
+  useLocalization,
+} from "@/features/localization/use-localization";
 
-import { ApiError } from "@/lib/api/api-client";
-import { getApiErrorMessage } from "@/lib/api/error-message";
-import { hasPermission } from "@/lib/permissions";
+import {
+  getAssignableAccounts,
+} from "@/features/people/api";
+
+import {
+  peopleQueryKeys,
+} from "@/features/people/query-keys";
+
+import {
+  ApiError,
+} from "@/lib/api/api-client";
+
+import {
+  getApiErrorMessage,
+} from "@/lib/api/error-message";
+
+import {
+  hasPermission,
+} from "@/lib/permissions";
 
 export default function GuardiansPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const confirm = useConfirmDialog();
 
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const {
+    dictionary,
+    statusLabel,
+  } = useLocalization();
 
-  const [includeArchived, setIncludeArchived] =
-    useState(false);
+  const t = dictionary.pages.guardians;
+  const common = dictionary.common;
 
-  const [editingGuardian, setEditingGuardian] =
-    useState<Guardian | null | undefined>(
-      undefined,
-    );
+  const [searchInput, setSearchInput] =
+    useState("");
+
+  const [search, setSearch] =
+    useState("");
+
+  const [
+    includeArchived,
+    setIncludeArchived,
+  ] = useState(false);
+
+  const [
+    editingGuardian,
+    setEditingGuardian,
+  ] = useState<
+    Guardian | null | undefined
+  >(undefined);
 
   const [formError, setFormError] =
     useState<string | null>(null);
@@ -56,12 +113,18 @@ export default function GuardiansPage() {
   const [pageError, setPageError] =
     useState<string | null>(null);
 
+  const [
+    updatingGuardianId,
+    setUpdatingGuardianId,
+  ] = useState<string | null>(null);
+
   const currentUserQuery = useQuery({
     queryKey: ["current-user"],
     queryFn: getCurrentUser,
   });
 
-  const currentUser = currentUserQuery.data;
+  const currentUser =
+    currentUserQuery.data;
 
   const canRead = hasPermission(
     currentUser,
@@ -78,12 +141,16 @@ export default function GuardiansPage() {
       search,
       includeArchived,
     ),
+
     queryFn: () =>
       getGuardians({
         search,
         includeArchived,
       }),
-    enabled: currentUserQuery.isSuccess && canRead,
+
+    enabled:
+      currentUserQuery.isSuccess &&
+      canRead,
   });
 
   const accountsQuery = useQuery({
@@ -91,20 +158,27 @@ export default function GuardiansPage() {
       peopleQueryKeys.assignableAccounts(
         "GUARDIAN",
       ),
+
     queryFn: () =>
       getAssignableAccounts("GUARDIAN"),
+
     enabled:
-      currentUserQuery.isSuccess && canManage,
+      currentUserQuery.isSuccess &&
+      canManage,
   });
 
   useEffect(() => {
     if (
-      currentUserQuery.error instanceof ApiError &&
+      currentUserQuery.error instanceof
+      ApiError &&
       currentUserQuery.error.status === 401
     ) {
       router.replace("/login");
     }
-  }, [currentUserQuery.error, router]);
+  }, [
+    currentUserQuery.error,
+    router,
+  ]);
 
   const createMutation = useMutation({
     mutationFn: createGuardian,
@@ -116,11 +190,15 @@ export default function GuardiansPage() {
       request,
     }: {
       guardianId: string;
+
       request: Parameters<
         typeof updateGuardian
       >[1];
     }) =>
-      updateGuardian(guardianId, request),
+      updateGuardian(
+        guardianId,
+        request,
+      ),
   });
 
   const statusMutation = useMutation({
@@ -144,15 +222,39 @@ export default function GuardiansPage() {
   async function refreshData() {
     await Promise.all([
       queryClient.invalidateQueries({
-        queryKey: guardianQueryKeys.all,
+        queryKey:
+          guardianQueryKeys.all,
       }),
+
       queryClient.invalidateQueries({
         queryKey:
-          peopleQueryKeys.assignableAccounts(
-            "GUARDIAN",
-          ),
+          peopleQueryKeys
+            .assignableAccounts(
+              "GUARDIAN",
+            ),
       }),
     ]);
+  }
+
+  function openCreateDialog() {
+    setFormError(null);
+    setEditingGuardian(null);
+  }
+
+  function openEditDialog(
+    guardian: Guardian,
+  ) {
+    setFormError(null);
+    setEditingGuardian(guardian);
+  }
+
+  function closeDialog() {
+    if (formSubmitting) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingGuardian(undefined);
   }
 
   async function saveGuardian(
@@ -160,22 +262,35 @@ export default function GuardiansPage() {
   ) {
     const request = {
       membershipId: values.membershipId,
+
       guardianNumber:
         values.guardianNumber || null,
+
       phone: values.phone || null,
+
       alternatePhone:
         values.alternatePhone || null,
-      occupation: values.occupation || null,
+
+      occupation:
+        values.occupation || null,
+
       addressLine1:
         values.addressLine1 || null,
+
       addressLine2:
         values.addressLine2 || null,
+
       city: values.city || null,
+
       stateProvince:
         values.stateProvince || null,
-      postalCode: values.postalCode || null,
+
+      postalCode:
+        values.postalCode || null,
+
       countryCode:
         values.countryCode || null,
+
       notes: values.notes || null,
     };
 
@@ -184,20 +299,25 @@ export default function GuardiansPage() {
     try {
       if (editingGuardian) {
         await updateMutation.mutateAsync({
-          guardianId: editingGuardian.id,
+          guardianId:
+            editingGuardian.id,
+
           request,
         });
       } else {
-        await createMutation.mutateAsync(request);
+        await createMutation.mutateAsync(
+          request,
+        );
       }
 
       await refreshData();
+
       setEditingGuardian(undefined);
     } catch (error) {
       setFormError(
         getApiErrorMessage(
           error,
-          "The guardian profile could not be saved.",
+          t.saveError,
         ),
       );
     }
@@ -205,14 +325,58 @@ export default function GuardiansPage() {
 
   async function changeStatus(
     guardian: Guardian,
-    status: GuardianStatus,
+    newStatus: GuardianStatus,
   ) {
+    if (guardian.status === newStatus) {
+      return;
+    }
+
+    const guardianName =
+      `${guardian.firstName} ${guardian.lastName}`;
+
+    const confirmed = await confirm({
+      title: t.statusChangeTitle,
+
+      description: formatMessage(
+        t.statusChangeDescription,
+        {
+          name: guardianName,
+
+          currentStatus:
+            statusLabel(
+              guardian.status,
+            ),
+
+          newStatus:
+            statusLabel(newStatus),
+        },
+      ),
+
+      confirmLabel:
+        common.actions.confirm,
+
+      cancelLabel:
+        common.actions.cancel,
+
+      variant:
+        newStatus === "ARCHIVED"
+          ? "danger"
+          : newStatus === "INACTIVE"
+            ? "warning"
+            : "info",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     setPageError(null);
+    setUpdatingGuardianId(guardian.id);
 
     try {
       await statusMutation.mutateAsync({
         guardianId: guardian.id,
-        status,
+        status: newStatus,
       });
 
       await refreshData();
@@ -220,261 +384,352 @@ export default function GuardiansPage() {
       setPageError(
         getApiErrorMessage(
           error,
-          "The guardian status could not be changed.",
+          t.statusChangeError,
         ),
       );
+    } finally {
+      setUpdatingGuardianId(null);
     }
+  }
+
+  function handleSearchSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    setSearch(searchInput.trim());
+  }
+
+  function clearSearch() {
+    setSearchInput("");
+    setSearch("");
   }
 
   if (currentUserQuery.isPending) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100">
-        Loading...
+        <p className="text-slate-600">
+          {t.sessionLoading}
+        </p>
       </main>
     );
   }
 
-  if (!currentUser) {
-    return null;
+  if (
+    currentUserQuery.isError ||
+    !currentUser
+  ) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100">
+        <div className="rounded-xl bg-red-50 p-5 text-red-700">
+          {t.sessionLoadError}
+        </div>
+      </main>
+    );
+  }
+
+  if (!canRead) {
+    return (
+      <div className="min-h-screen bg-slate-100">
+        <DashboardHeader
+          user={currentUser}
+        />
+
+        <main className="mx-auto max-w-7xl p-6">
+          <div className="rounded-xl bg-red-50 p-5 text-red-700">
+            {
+              common.messages
+                .permissionDenied
+            }
+          </div>
+        </main>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <DashboardHeader user={currentUser} />
+      <DashboardHeader
+        user={currentUser}
+      />
 
       <main className="mx-auto max-w-7xl p-6">
-        {!canRead ? (
-          <div className="rounded-xl bg-red-50 p-5 text-red-700">
-            You do not have permission to view guardians.
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">
+              {t.title}
+            </h1>
+
+            <p className="mt-1 text-slate-600">
+              {t.description}
+            </p>
           </div>
-        ) : (
-          <>
-            <header className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold">
-                  Guardians
-                </h1>
 
-                <p className="mt-1 text-slate-600">
-                  Manage parents and legal guardian
-                  profiles.
-                </p>
-              </div>
+          {canManage && (
+            <button
+              type="button"
+              onClick={openCreateDialog}
+              className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
+            >
+              {t.create}
+            </button>
+          )}
+        </header>
 
-              {canManage && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormError(null);
-                    setEditingGuardian(null);
-                  }}
-                  className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white"
-                >
-                  Create guardian profile
-                </button>
-              )}
-            </header>
+        <div className="mt-6 flex flex-wrap items-center gap-4">
+          <form
+            className="flex max-w-xl flex-1 gap-2"
+            onSubmit={handleSearchSubmit}
+          >
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(event) =>
+                setSearchInput(
+                  event.target.value,
+                )
+              }
+              placeholder={
+                t.searchPlaceholder
+              }
+              aria-label={
+                t.searchPlaceholder
+              }
+              className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2"
+            />
 
-            <div className="mt-6 flex flex-wrap items-center gap-4">
-              <form
-                className="flex max-w-xl flex-1 gap-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  setSearch(searchInput.trim());
-                }}
+            <button
+              type="submit"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium transition hover:bg-slate-50"
+            >
+              {common.actions.search}
+            </button>
+
+            {(search || searchInput) && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 transition hover:bg-slate-50"
               >
-                <input
-                  type="search"
-                  value={searchInput}
-                  onChange={(event) =>
-                    setSearchInput(
-                      event.target.value,
-                    )
-                  }
-                  placeholder="Search guardians"
-                  className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2"
-                />
+                {common.actions.clear}
+              </button>
+            )}
+          </form>
 
-                <button
-                  type="submit"
-                  className="rounded-lg border border-slate-300 bg-white px-4 py-2"
-                >
-                  Search
-                </button>
-              </form>
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={includeArchived}
+              onChange={(event) =>
+                setIncludeArchived(
+                  event.target.checked,
+                )
+              }
+            />
 
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={includeArchived}
-                  onChange={(event) =>
-                    setIncludeArchived(
-                      event.target.checked,
-                    )
-                  }
-                />
-                Include archived
-              </label>
+            {t.includeArchived}
+          </label>
+        </div>
+
+        {pageError && (
+          <div
+            role="alert"
+            className="mt-5 rounded-lg bg-red-50 p-4 text-red-700"
+          >
+            {pageError}
+          </div>
+        )}
+
+        <section className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm">
+          {guardiansQuery.isPending && (
+            <div className="p-10 text-center text-slate-500">
+              {t.loading}
             </div>
+          )}
 
-            {pageError && (
-              <div className="mt-5 rounded-lg bg-red-50 p-4 text-red-700">
-                {pageError}
+          {guardiansQuery.isError && (
+            <div className="p-10 text-center text-red-600">
+              {getApiErrorMessage(
+                guardiansQuery.error,
+                t.loadError,
+              )}
+            </div>
+          )}
+
+          {!guardiansQuery.isPending &&
+            !guardiansQuery.isError &&
+            guardiansQuery.data?.length ===
+            0 && (
+              <div className="p-10 text-center text-slate-500">
+                {t.empty}
               </div>
             )}
 
-            <section className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm">
-              {guardiansQuery.isPending && (
-                <div className="p-10 text-center">
-                  Loading guardians...
-                </div>
-              )}
+          {guardiansQuery.data &&
+            guardiansQuery.data.length >
+            0 && (
+              <table className="w-full min-w-[900px] text-left">
+                <thead className="border-b bg-slate-50">
+                  <tr>
+                    <th className="p-4">
+                      {t.guardian}
+                    </th>
 
-              {guardiansQuery.isError && (
-                <div className="p-10 text-center text-red-600">
-                  {getApiErrorMessage(
-                    guardiansQuery.error,
-                  )}
-                </div>
-              )}
+                    <th className="p-4">
+                      {t.number}
+                    </th>
 
-              {guardiansQuery.data?.length ===
-                0 && (
-                <div className="p-10 text-center text-slate-500">
-                  No guardian profiles were found.
-                </div>
-              )}
+                    <th className="p-4">
+                      {t.contact}
+                    </th>
 
-              {guardiansQuery.data &&
-                guardiansQuery.data.length > 0 && (
-                  <table className="w-full min-w-[900px] text-left">
-                    <thead className="border-b bg-slate-50">
-                      <tr>
-                        <th className="p-4">
-                          Guardian
-                        </th>
-                        <th className="p-4">
-                          Number
-                        </th>
-                        <th className="p-4">
-                          Contact
-                        </th>
-                        <th className="p-4">
-                          Location
-                        </th>
-                        <th className="p-4">
-                          Status
-                        </th>
-                        <th className="p-4">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
+                    <th className="p-4">
+                      {t.location}
+                    </th>
 
-                    <tbody className="divide-y">
-                      {guardiansQuery.data.map(
-                        (guardian) => (
-                          <tr key={guardian.id}>
-                            <td className="p-4">
-                              <p className="font-medium">
+                    <th className="p-4">
+                      {common.fields.status}
+                    </th>
+
+                    <th className="p-4">
+                      {common.fields.actions}
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y">
+                  {guardiansQuery.data.map(
+                    (guardian) => (
+                      <tr key={guardian.id}>
+                        <td className="p-4">
+                          <p className="font-medium">
+                            {
+                              guardian.firstName
+                            }{" "}
+                            {guardian.lastName}
+                          </p>
+
+                          <p className="text-sm text-slate-500">
+                            {guardian.email}
+                          </p>
+
+                          {guardian.occupation && (
+                            <p className="text-sm text-slate-600">
+                              {
+                                guardian.occupation
+                              }
+                            </p>
+                          )}
+                        </td>
+
+                        <td className="p-4">
+                          {guardian.guardianNumber ||
+                            "—"}
+                        </td>
+
+                        <td className="p-4 text-sm">
+                          <p>
+                            {guardian.phone ||
+                              "—"}
+                          </p>
+
+                          {guardian.alternatePhone && (
+                            <p className="mt-1 text-slate-500">
+                              {
+                                guardian.alternatePhone
+                              }
+                            </p>
+                          )}
+                        </td>
+
+                        <td className="p-4">
+                          {[
+                            guardian.city,
+                            guardian.countryCode,
+                          ]
+                            .filter(Boolean)
+                            .join(", ") || "—"}
+                        </td>
+
+                        <td className="p-4">
+                          <GuardianStatusBadge
+                            status={
+                              guardian.status
+                            }
+                          />
+                        </td>
+
+                        <td className="p-4">
+                          {canManage && (
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openEditDialog(
+                                    guardian,
+                                  )
+                                }
+                                className="rounded border border-slate-300 px-3 py-1.5 text-sm transition hover:bg-slate-50"
+                              >
                                 {
-                                  guardian.firstName
-                                }{" "}
-                                {guardian.lastName}
-                              </p>
-                              <p className="text-sm text-slate-500">
-                                {guardian.email}
-                              </p>
-                              {guardian.occupation && (
-                                <p className="text-sm">
-                                  {
-                                    guardian.occupation
-                                  }
-                                </p>
-                              )}
-                            </td>
+                                  common.actions
+                                    .edit
+                                }
+                              </button>
 
-                            <td className="p-4">
-                              {guardian.guardianNumber ||
-                                "—"}
-                            </td>
+                              <select
+                                value={
+                                  guardian.status
+                                }
+                                disabled={
+                                  updatingGuardianId ===
+                                  guardian.id
+                                }
+                                aria-label={
+                                  t.statusChangeTitle
+                                }
+                                onChange={(
+                                  event,
+                                ) => {
+                                  const newStatus =
+                                    event.target
+                                      .value as GuardianStatus;
 
-                            <td className="p-4 text-sm">
-                              <p>
-                                {guardian.phone || "—"}
-                              </p>
-                              <p>
-                                {guardian.alternatePhone ||
-                                  ""}
-                              </p>
-                            </td>
+                                  void changeStatus(
+                                    guardian,
+                                    newStatus,
+                                  );
+                                }}
+                                className="rounded border border-slate-300 px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <option value="ACTIVE">
+                                  {statusLabel(
+                                    "ACTIVE",
+                                  )}
+                                </option>
 
-                            <td className="p-4">
-                              {[
-                                guardian.city,
-                                guardian.countryCode,
-                              ]
-                                .filter(Boolean)
-                                .join(", ") || "—"}
-                            </td>
+                                <option value="INACTIVE">
+                                  {statusLabel(
+                                    "INACTIVE",
+                                  )}
+                                </option>
 
-                            <td className="p-4">
-                              {guardian.status}
-                            </td>
-
-                            <td className="p-4">
-                              {canManage && (
-                                <div className="flex gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setFormError(
-                                        null,
-                                      );
-                                      setEditingGuardian(
-                                        guardian,
-                                      );
-                                    }}
-                                    className="rounded border px-3 py-1.5 text-sm"
-                                  >
-                                    Edit
-                                  </button>
-
-                                  <select
-                                    value={
-                                      guardian.status
-                                    }
-                                    onChange={(event) =>
-                                      changeStatus(
-                                        guardian,
-                                        event.target
-                                          .value as GuardianStatus,
-                                      )
-                                    }
-                                    className="rounded border px-2 py-1.5 text-sm"
-                                  >
-                                    <option value="ACTIVE">
-                                      Active
-                                    </option>
-                                    <option value="INACTIVE">
-                                      Inactive
-                                    </option>
-                                    <option value="ARCHIVED">
-                                      Archived
-                                    </option>
-                                  </select>
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        ),
-                      )}
-                    </tbody>
-                  </table>
-                )}
-            </section>
-          </>
-        )}
+                                <option value="ARCHIVED">
+                                  {statusLabel(
+                                    "ARCHIVED",
+                                  )}
+                                </option>
+                              </select>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ),
+                  )}
+                </tbody>
+              </table>
+            )}
+        </section>
       </main>
 
       {editingGuardian !== undefined && (
@@ -482,18 +737,64 @@ export default function GuardiansPage() {
           guardian={
             editingGuardian ?? undefined
           }
-          accounts={accountsQuery.data ?? []}
+          accounts={
+            accountsQuery.data ?? []
+          }
           submitting={formSubmitting}
           errorMessage={formError}
-          onClose={() => {
-            if (!formSubmitting) {
-              setEditingGuardian(undefined);
-              setFormError(null);
-            }
-          }}
+          onClose={closeDialog}
           onSubmit={saveGuardian}
         />
       )}
     </div>
+  );
+}
+
+function GuardianStatusBadge({
+  status,
+}: {
+  status: GuardianStatus;
+}) {
+  const {
+    statusLabel,
+  } = useLocalization();
+
+  const styles: Record<
+    GuardianStatus,
+    string
+  > = {
+    ACTIVE:
+      "bg-green-100 text-green-700",
+
+    INACTIVE:
+      "bg-amber-100 text-amber-700",
+
+    ARCHIVED:
+      "bg-slate-200 text-slate-700",
+  };
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}
+    >
+      {statusLabel(status)}
+    </span>
+  );
+}
+
+function formatMessage(
+  message: string,
+  values: Record<
+    string,
+    string | number
+  >,
+): string {
+  return Object.entries(values).reduce(
+    (result, [key, value]) =>
+      result.replaceAll(
+        `{${key}}`,
+        String(value),
+      ),
+    message,
   );
 }

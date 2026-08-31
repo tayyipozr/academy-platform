@@ -13,6 +13,7 @@ import {
 } from "./student-form-schema";
 
 import type { Student } from "./types";
+import { useLocalization } from "../localization/use-localization";
 
 type StudentFormDialogProps = {
   student?: Student;
@@ -79,6 +80,15 @@ export function StudentFormDialog({
     });
   }, [reset, student]);
 
+  const {
+    dictionary,
+    statusLabel,
+    formatDateTime,
+  } = useLocalization();
+
+  const t = dictionary.pages.students;
+  const common = dictionary.common;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4"
@@ -93,8 +103,8 @@ export function StudentFormDialog({
             className="text-xl font-semibold"
           >
             {student
-              ? "Edit student"
-              : "Create student"}
+              ? t.edit
+              : t.create}
           </h2>
 
           <button
@@ -103,7 +113,7 @@ export function StudentFormDialog({
             onClick={onClose}
             className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100"
           >
-            Close
+            {common.actions.close}
           </button>
         </header>
 
@@ -113,13 +123,13 @@ export function StudentFormDialog({
         >
           <section>
             <h3 className="font-semibold">
-              General information
+              {dictionary.pages.settings.generalInformation}
             </h3>
 
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <FormField
                 id="studentNumber"
-                label="Student number"
+                label={t.studentNumber}
                 error={
                   errors.studentNumber?.message
                 }
@@ -133,7 +143,7 @@ export function StudentFormDialog({
 
               <FormField
                 id="branchId"
-                label="Branch"
+                label={common.fields.branch}
                 error={errors.branchId?.message}
               >
                 <select
@@ -142,7 +152,7 @@ export function StudentFormDialog({
                   {...register("branchId")}
                 >
                   <option value="">
-                    No branch assignment
+                    {dictionary.pages.branches.notAssigned}
                   </option>
 
                   {branches
@@ -163,7 +173,7 @@ export function StudentFormDialog({
 
               <FormField
                 id="firstName"
-                label="First name"
+                label={common.fields.firstName}
                 error={errors.firstName?.message}
               >
                 <input
@@ -175,7 +185,7 @@ export function StudentFormDialog({
 
               <FormField
                 id="lastName"
-                label="Last name"
+                label={common.fields.lastName}
                 error={errors.lastName?.message}
               >
                 <input
@@ -187,7 +197,7 @@ export function StudentFormDialog({
 
               <FormField
                 id="birthDate"
-                label="Birth date"
+                label={t.birthDate}
                 error={errors.birthDate?.message}
               >
                 <input
@@ -200,7 +210,7 @@ export function StudentFormDialog({
 
               <FormField
                 id="gender"
-                label="Gender"
+                label={t.gender}
                 error={errors.gender?.message}
               >
                 <select
@@ -209,16 +219,13 @@ export function StudentFormDialog({
                   {...register("gender")}
                 >
                   <option value="UNSPECIFIED">
-                    Unspecified
+                    {common.statuses.UNSPECIFIED}
                   </option>
                   <option value="FEMALE">
-                    Female
+                    {common.statuses.FEMALE}
                   </option>
                   <option value="MALE">
-                    Male
-                  </option>
-                  <option value="NON_BINARY">
-                    Non-binary
+                    {common.statuses.MALE}
                   </option>
                 </select>
               </FormField>
@@ -242,13 +249,13 @@ export function StudentFormDialog({
 
           <section>
             <h3 className="font-semibold">
-              Medical and emergency information
+              {t.medicalInformation}
             </h3>
 
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <FormField
                 id="emergencyContactName"
-                label="Emergency contact"
+                label={t.emergencyContact}
                 error={
                   errors.emergencyContactName
                     ?.message
@@ -265,7 +272,7 @@ export function StudentFormDialog({
 
               <FormField
                 id="emergencyContactPhone"
-                label="Emergency contact phone"
+                label={t.emergencyPhone}
                 error={
                   errors.emergencyContactPhone
                     ?.message
@@ -282,7 +289,7 @@ export function StudentFormDialog({
 
               <FormField
                 id="allergies"
-                label="Allergies"
+                label={t.allergies}
                 error={errors.allergies?.message}
               >
                 <textarea
@@ -295,7 +302,7 @@ export function StudentFormDialog({
 
               <FormField
                 id="medicalNotes"
-                label="Medical notes"
+                label={t.medicalNotes}
                 error={
                   errors.medicalNotes?.message
                 }
@@ -312,7 +319,7 @@ export function StudentFormDialog({
 
           <FormField
             id="notes"
-            label="General notes"
+            label={t.generalNotes}
             error={errors.notes?.message}
           >
             <textarea
@@ -339,7 +346,7 @@ export function StudentFormDialog({
               onClick={onClose}
               className="rounded-lg border border-slate-300 px-4 py-2"
             >
-              Cancel
+              {common.actions.cancel}
             </button>
 
             <button
@@ -348,8 +355,8 @@ export function StudentFormDialog({
               className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-50"
             >
               {submitting
-                ? "Saving..."
-                : "Save student"}
+                ? common.actions.saving
+                : t.create}
             </button>
           </footer>
         </form>

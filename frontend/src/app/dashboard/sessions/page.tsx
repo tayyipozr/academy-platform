@@ -37,6 +37,7 @@ import type {
 
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
+import { useLocalization } from "@/features/localization/use-localization";
 
 type DialogState =
   | {
@@ -154,6 +155,13 @@ export default function SessionsPage() {
     rescheduleMutation.isPending ||
     statusMutation.isPending;
 
+  const {
+    dictionary,
+  } = useLocalization();
+
+  const t = dictionary.pages.schedule;
+  const common = dictionary.common;
+
   async function refreshSessions() {
     await queryClient.invalidateQueries({
       queryKey: schedulingQueryKeys.all,
@@ -219,18 +227,17 @@ export default function SessionsPage() {
       <main className="mx-auto max-w-7xl p-6">
         {!canRead ? (
           <div className="rounded-xl bg-red-50 p-5 text-red-700">
-            You do not have permission to view sessions.
+            {common.messages.noPermission}
           </div>
         ) : (
           <>
             <header>
               <h1 className="text-2xl font-bold">
-                My schedule
+                {t.mySchedule}
               </h1>
 
               <p className="mt-1 text-slate-600">
-                View and manage upcoming lessons and
-                training sessions.
+                {t.description}
               </p>
             </header>
 
@@ -265,22 +272,22 @@ export default function SessionsPage() {
                 className="rounded-lg border px-3 py-2"
               >
                 <option value="">
-                  All statuses
+                  {common.filters.allStatuses}
                 </option>
                 <option value="SCHEDULED">
-                  Scheduled
+                  {common.statuses.SCHEDULED}
                 </option>
                 <option value="IN_PROGRESS">
-                  In progress
+                  {common.statuses.IN_PROGRESS}
                 </option>
                 <option value="COMPLETED">
-                  Completed
+                  {common.statuses.COMPLETED}
                 </option>
                 <option value="POSTPONED">
-                  Postponed
+                  {common.statuses.POSTPONED}
                 </option>
                 <option value="CANCELLED">
-                  Cancelled
+                  {common.statuses.CANCELLED}
                 </option>
               </select>
             </section>
@@ -288,7 +295,7 @@ export default function SessionsPage() {
             <section className="mt-6 overflow-hidden rounded-xl bg-white shadow-sm">
               {sessionsQuery.isPending ? (
                 <div className="p-10 text-center">
-                  Loading schedule...
+                  {t.loading}
                 </div>
               ) : sessionsQuery.isError ? (
                 <div className="p-10 text-center text-red-600">

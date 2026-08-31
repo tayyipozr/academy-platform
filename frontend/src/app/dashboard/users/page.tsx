@@ -1,7 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
+
+import {
+  useRouter,
+} from "next/navigation";
 
 import {
   useMutation,
@@ -9,7 +17,23 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
-import { getCurrentUser } from "@/features/auth/api";
+import {
+  DashboardHeader,
+} from "@/components/dashboard-header";
+
+import {
+  useConfirmDialog,
+} from "@/components/confirm-dialog-provider";
+
+import {
+  getCurrentUser,
+} from "@/features/auth/api";
+
+import {
+  formatMessage,
+  useLocalization,
+} from "@/features/localization/use-localization";
+
 import {
   createInvitation,
   createUser,
@@ -20,20 +44,39 @@ import {
   updateUser,
 } from "@/features/users/api";
 
-import { InvitationResultDialog } from "@/features/users/invitation-result-dialog";
-import { UserFormDialog } from "@/features/users/user-form-dialog";
-import type { UserFormValues } from "@/features/users/user-form-schema";
-import { userQueryKeys } from "@/features/users/query-keys";
-import { UserTable } from "@/features/users/user-table";
+import {
+  InvitationResultDialog,
+} from "@/features/users/invitation-result-dialog";
+
+import {
+  UserFormDialog,
+} from "@/features/users/user-form-dialog";
+
+import type {
+  UserFormValues,
+} from "@/features/users/user-form-schema";
+
+import {
+  userQueryKeys,
+} from "@/features/users/query-keys";
+
+import {
+  UserTable,
+} from "@/features/users/user-table";
 
 import type {
   OrganizationUser,
   UserInvitationResponse,
 } from "@/features/users/types";
 
-import { DashboardHeader } from "@/components/dashboard-header";
-import { ApiError } from "@/lib/api/api-client";
-import { getApiErrorMessage } from "@/lib/api/error-message";
+import {
+  ApiError,
+} from "@/lib/api/api-client";
+
+import {
+  getApiErrorMessage,
+} from "@/lib/api/error-message";
+
 import {
   hasPermission,
 } from "@/lib/permissions";
@@ -56,10 +99,23 @@ const PAGE_SIZE = 20;
 export default function UsersPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const confirm = useConfirmDialog();
 
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(0);
+  const {
+    dictionary,
+  } = useLocalization();
+
+  const t = dictionary.pages.users;
+  const common = dictionary.common;
+
+  const [searchInput, setSearchInput] =
+    useState("");
+
+  const [search, setSearch] =
+    useState("");
+
+  const [page, setPage] =
+    useState(0);
 
   const [dialog, setDialog] =
     useState<DialogState>(null);
@@ -70,18 +126,26 @@ export default function UsersPage() {
   const [pageError, setPageError] =
     useState<string | null>(null);
 
-  const [invitationResult, setInvitationResult] =
-    useState<UserInvitationResponse | null>(null);
+  const [
+    invitationResult,
+    setInvitationResult,
+  ] =
+    useState<UserInvitationResponse | null>(
+      null,
+    );
 
-  const [statusUpdatingMembershipId, setStatusUpdatingMembershipId] =
-    useState<string | null>(null);
+  const [
+    statusUpdatingMembershipId,
+    setStatusUpdatingMembershipId,
+  ] = useState<string | null>(null);
 
   const currentUserQuery = useQuery({
     queryKey: ["current-user"],
     queryFn: getCurrentUser,
   });
 
-  const currentUser = currentUserQuery.data;
+  const currentUser =
+    currentUserQuery.data;
 
   const canReadUsers = hasPermission(
     currentUser,
@@ -111,9 +175,13 @@ export default function UsersPage() {
   const rolesQuery = useQuery({
     queryKey: userQueryKeys.roles,
     queryFn: getRoles,
+
     enabled:
       currentUserQuery.isSuccess &&
-      hasPermission(currentUser, "roles.read"),
+      hasPermission(
+        currentUser,
+        "roles.read",
+      ),
   });
 
   const usersQuery = useQuery({
@@ -122,14 +190,17 @@ export default function UsersPage() {
       page,
       PAGE_SIZE,
     ),
+
     queryFn: () =>
       getUsers({
         search,
         page,
         size: PAGE_SIZE,
       }),
+
     enabled:
-      currentUserQuery.isSuccess && canReadUsers,
+      currentUserQuery.isSuccess &&
+      canReadUsers,
   });
 
   const totalPages =
@@ -142,12 +213,16 @@ export default function UsersPage() {
 
   useEffect(() => {
     if (
-      currentUserQuery.error instanceof ApiError &&
+      currentUserQuery.error instanceof
+      ApiError &&
       currentUserQuery.error.status === 401
     ) {
       router.replace("/login");
     }
-  }, [currentUserQuery.error, router]);
+  }, [
+    currentUserQuery.error,
+    router,
+  ]);
 
   async function refreshUsers() {
     await queryClient.invalidateQueries({
@@ -201,16 +276,25 @@ export default function UsersPage() {
 
   function openCreateDialog() {
     setFormError(null);
-    setDialog({ mode: "create" });
+
+    setDialog({
+      mode: "create",
+    });
   }
 
   function openInvitationDialog() {
     setFormError(null);
-    setDialog({ mode: "invite" });
+
+    setDialog({
+      mode: "invite",
+    });
   }
 
-  function openEditDialog(user: OrganizationUser) {
+  function openEditDialog(
+    user: OrganizationUser,
+  ) {
     setFormError(null);
+
     setDialog({
       mode: "edit",
       user,
@@ -241,20 +325,24 @@ export default function UsersPage() {
           email: values.email,
           firstName: values.firstName,
           lastName: values.lastName,
+
           temporaryPassword:
             values.temporaryPassword,
+
           roleIds: values.roleIds,
         });
       }
 
       if (dialog.mode === "invite") {
         const result =
-          await invitationMutation.mutateAsync({
-            email: values.email,
-            firstName: values.firstName,
-            lastName: values.lastName,
-            roleIds: values.roleIds,
-          });
+          await invitationMutation.mutateAsync(
+            {
+              email: values.email,
+              firstName: values.firstName,
+              lastName: values.lastName,
+              roleIds: values.roleIds,
+            },
+          );
 
         setInvitationResult(result);
       }
@@ -263,17 +351,19 @@ export default function UsersPage() {
         await updateUserMutation.mutateAsync({
           membershipId:
             dialog.user.membershipId,
+
           values,
         });
       }
 
       await refreshUsers();
+
       setDialog(null);
     } catch (error) {
       setFormError(
         getApiErrorMessage(
           error,
-          "The user could not be saved.",
+          t.saveError,
         ),
       );
     }
@@ -282,15 +372,34 @@ export default function UsersPage() {
   async function handleSuspend(
     user: OrganizationUser,
   ) {
-    const confirmed = window.confirm(
-      `Suspend ${user.firstName} ${user.lastName}? Their active session will be invalidated.`,
-    );
+    const userName =
+      `${user.firstName} ${user.lastName}`;
+
+    const confirmed = await confirm({
+      title: t.suspendTitle,
+
+      description: formatMessage(
+        t.suspendDescription,
+        {
+          name: userName,
+        },
+      ),
+
+      confirmLabel:
+        common.actions.suspend,
+
+      cancelLabel:
+        common.actions.cancel,
+
+      variant: "danger",
+    });
 
     if (!confirmed) {
       return;
     }
 
     setPageError(null);
+
     setStatusUpdatingMembershipId(
       user.membershipId,
     );
@@ -305,7 +414,7 @@ export default function UsersPage() {
       setPageError(
         getApiErrorMessage(
           error,
-          "The user could not be suspended.",
+          t.suspendError,
         ),
       );
     } finally {
@@ -316,7 +425,34 @@ export default function UsersPage() {
   async function handleReactivate(
     user: OrganizationUser,
   ) {
+    const userName =
+      `${user.firstName} ${user.lastName}`;
+
+    const confirmed = await confirm({
+      title: t.reactivateTitle,
+
+      description: formatMessage(
+        t.reactivateDescription,
+        {
+          name: userName,
+        },
+      ),
+
+      confirmLabel:
+        common.actions.reactivate,
+
+      cancelLabel:
+        common.actions.cancel,
+
+      variant: "info",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     setPageError(null);
+
     setStatusUpdatingMembershipId(
       user.membershipId,
     );
@@ -331,7 +467,7 @@ export default function UsersPage() {
       setPageError(
         getApiErrorMessage(
           error,
-          "The user could not be reactivated.",
+          t.reactivateError,
         ),
       );
     } finally {
@@ -340,9 +476,10 @@ export default function UsersPage() {
   }
 
   function handleSearchSubmit(
-    event: React.FormEvent<HTMLFormElement>,
+    event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
+
     setPage(0);
     setSearch(searchInput.trim());
   }
@@ -357,17 +494,20 @@ export default function UsersPage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100">
         <p className="text-slate-600">
-          Loading user session...
+          {t.sessionLoading}
         </p>
       </main>
     );
   }
 
-  if (currentUserQuery.isError || !currentUser) {
+  if (
+    currentUserQuery.isError ||
+    !currentUser
+  ) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100">
         <div className="rounded-lg bg-red-50 p-5 text-red-700">
-          Your session could not be loaded.
+          {t.sessionLoadError}
         </div>
       </main>
     );
@@ -380,8 +520,10 @@ export default function UsersPage() {
 
         <main className="mx-auto max-w-7xl p-6">
           <div className="rounded-xl bg-red-50 p-5 text-red-700">
-            You do not have permission to access user
-            management.
+            {
+              common.messages
+                .permissionDenied
+            }
           </div>
         </main>
       </div>
@@ -393,15 +535,14 @@ export default function UsersPage() {
       <DashboardHeader user={currentUser} />
 
       <main className="mx-auto max-w-7xl p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
-              Organization users
+              {t.title}
             </h1>
 
             <p className="mt-1 text-slate-600">
-              Manage administrators, instructors, coaches,
-              teachers, and guardians.
+              {t.description}
             </p>
           </div>
 
@@ -409,22 +550,24 @@ export default function UsersPage() {
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={openInvitationDialog}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+                onClick={
+                  openInvitationDialog
+                }
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50"
               >
-                Invite user
+                {t.invite}
               </button>
 
               <button
                 type="button"
                 onClick={openCreateDialog}
-                className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+                className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
               >
-                Create active user
+                {t.create}
               </button>
             </div>
           )}
-        </div>
+        </header>
 
         <form
           onSubmit={handleSearchSubmit}
@@ -434,26 +577,33 @@ export default function UsersPage() {
             type="search"
             value={searchInput}
             onChange={(event) =>
-              setSearchInput(event.target.value)
+              setSearchInput(
+                event.target.value,
+              )
             }
-            placeholder="Search by name or email"
+            placeholder={
+              t.searchPlaceholder
+            }
+            aria-label={
+              t.searchPlaceholder
+            }
             className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2"
           />
 
           <button
             type="submit"
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium hover:bg-slate-50"
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium transition hover:bg-slate-50"
           >
-            Search
+            {common.actions.search}
           </button>
 
           {(search || searchInput) && (
             <button
               type="button"
               onClick={clearSearch}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 transition hover:bg-slate-50"
             >
-              Clear
+              {common.actions.clear}
             </button>
           )}
         </form>
@@ -470,7 +620,7 @@ export default function UsersPage() {
         <section className="mt-6 overflow-hidden rounded-xl bg-white shadow-sm">
           {usersQuery.isPending && (
             <div className="p-10 text-center text-slate-500">
-              Loading users...
+              {t.loading}
             </div>
           )}
 
@@ -478,35 +628,57 @@ export default function UsersPage() {
             <div className="p-10 text-center text-red-600">
               {getApiErrorMessage(
                 usersQuery.error,
-                "Users could not be loaded.",
+                t.loadError,
               )}
             </div>
           )}
 
-          {usersQuery.data && (
-            <UserTable
-              users={usersQuery.data.data}
-              currentMembershipId={
-                currentUser.membershipId
-              }
-              canUpdate={
-                canUpdateUsers && canManageRoles
-              }
-              canDeactivate={canDeactivateUsers}
-              statusUpdatingMembershipId={
-                statusUpdatingMembershipId
-              }
-              onEdit={openEditDialog}
-              onSuspend={handleSuspend}
-              onReactivate={handleReactivate}
-            />
-          )}
+          {usersQuery.data &&
+            usersQuery.data.data.length === 0 && (
+              <div className="p-10 text-center text-slate-500">
+                {t.empty}
+              </div>
+            )}
+
+          {usersQuery.data &&
+            usersQuery.data.data.length > 0 && (
+              <UserTable
+                users={
+                  usersQuery.data.data
+                }
+                currentMembershipId={
+                  currentUser.membershipId
+                }
+                canUpdate={
+                  canUpdateUsers &&
+                  canManageRoles
+                }
+                canDeactivate={
+                  canDeactivateUsers
+                }
+                statusUpdatingMembershipId={
+                  statusUpdatingMembershipId
+                }
+                onEdit={openEditDialog}
+                onSuspend={handleSuspend}
+                onReactivate={
+                  handleReactivate
+                }
+              />
+            )}
         </section>
 
         {usersQuery.data && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
             <p className="text-sm text-slate-600">
-              {usersQuery.data.page.totalElements} users
+              {formatMessage(
+                t.totalUsers,
+                {
+                  count:
+                    usersQuery.data.page
+                      .totalElements,
+                },
+              )}
             </p>
 
             <div className="flex items-center gap-3">
@@ -515,31 +687,46 @@ export default function UsersPage() {
                 disabled={page === 0}
                 onClick={() =>
                   setPage((value) =>
-                    Math.max(value - 1, 0),
+                    Math.max(
+                      value - 1,
+                      0,
+                    ),
                   )
                 }
                 className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Previous
+                {common.actions.previous}
               </button>
 
               <span className="text-sm text-slate-600">
-                Page {displayedPage + 1} of{" "}
-                {Math.max(totalPages, 1)}
+                {formatMessage(
+                  t.pageInformation,
+                  {
+                    page:
+                      displayedPage + 1,
+
+                    totalPages:
+                      Math.max(
+                        totalPages,
+                        1,
+                      ),
+                  },
+                )}
               </span>
 
               <button
                 type="button"
                 disabled={
-                  page + 1 >=
-                  usersQuery.data.page.totalPages
+                  page + 1 >= totalPages
                 }
                 onClick={() =>
-                  setPage((value) => value + 1)
+                  setPage(
+                    (value) => value + 1,
+                  )
                 }
                 className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Next
+                {common.actions.next}
               </button>
             </div>
           </div>
@@ -560,7 +747,9 @@ export default function UsersPage() {
 
       {invitationResult && (
         <InvitationResultDialog
-          invitation={invitationResult}
+          invitation={
+            invitationResult
+          }
           onClose={() =>
             setInvitationResult(null)
           }
@@ -569,3 +758,4 @@ export default function UsersPage() {
     </div>
   );
 }
+

@@ -11,6 +11,7 @@ import {
 } from "./branch-form-schema";
 
 import type { Branch } from "./types";
+import { useLocalization } from "../localization/use-localization";
 
 const timezoneOptions = [
   "UTC",
@@ -79,6 +80,13 @@ export function BranchFormDialog({
     });
   }, [branch, reset]);
 
+  const {
+    dictionary,
+  } = useLocalization();
+
+  const t = dictionary.pages.branches;
+  const common = dictionary.common;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4"
@@ -88,7 +96,7 @@ export function BranchFormDialog({
       <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
         <header className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">
-            {branch ? "Edit branch" : "Create branch"}
+            {branch ? t.edit : t.create}
           </h2>
 
           <button
@@ -97,7 +105,7 @@ export function BranchFormDialog({
             onClick={onClose}
             className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100"
           >
-            Close
+            {common.actions.close}
           </button>
         </header>
 
@@ -108,7 +116,7 @@ export function BranchFormDialog({
           <div className="grid gap-4 md:grid-cols-2">
             <FormField
               id="code"
-              label="Branch code"
+              label={t.code}
               error={errors.code?.message}
             >
               <input
@@ -120,7 +128,7 @@ export function BranchFormDialog({
 
             <FormField
               id="name"
-              label="Branch name"
+              label={t.name}
               error={errors.name?.message}
             >
               <input
@@ -132,7 +140,7 @@ export function BranchFormDialog({
 
             <FormField
               id="email"
-              label="Email"
+              label={common.fields.email}
               error={errors.email?.message}
             >
               <input
@@ -145,7 +153,7 @@ export function BranchFormDialog({
 
             <FormField
               id="phone"
-              label="Phone"
+              label={common.fields.phone}
               error={errors.phone?.message}
             >
               <input
@@ -157,7 +165,7 @@ export function BranchFormDialog({
 
             <FormField
               id="addressLine1"
-              label="Address line 1"
+              label={common.fields.addressLine1}
               error={errors.addressLine1?.message}
             >
               <input
@@ -169,7 +177,7 @@ export function BranchFormDialog({
 
             <FormField
               id="addressLine2"
-              label="Address line 2"
+              label={common.fields.addressLine2}
               error={errors.addressLine2?.message}
             >
               <input
@@ -181,7 +189,7 @@ export function BranchFormDialog({
 
             <FormField
               id="city"
-              label="City"
+              label={common.fields.city}
               error={errors.city?.message}
             >
               <input
@@ -193,7 +201,7 @@ export function BranchFormDialog({
 
             <FormField
               id="stateProvince"
-              label="State or province"
+              label={common.fields.stateProvince}
               error={errors.stateProvince?.message}
             >
               <input
@@ -205,7 +213,7 @@ export function BranchFormDialog({
 
             <FormField
               id="postalCode"
-              label="Postal code"
+              label={common.fields.postalCode}
               error={errors.postalCode?.message}
             >
               <input
@@ -217,7 +225,7 @@ export function BranchFormDialog({
 
             <FormField
               id="countryCode"
-              label="Country code"
+              label={common.fields.countryCode}
               error={errors.countryCode?.message}
             >
               <input
@@ -231,7 +239,7 @@ export function BranchFormDialog({
 
             <FormField
               id="timezone"
-              label="Timezone"
+              label={common.fields.timezone}
               error={errors.timezone?.message}
             >
               <select
@@ -264,7 +272,7 @@ export function BranchFormDialog({
               onClick={onClose}
               className="rounded-lg border border-slate-300 px-4 py-2"
             >
-              Cancel
+              {common.actions.cancel}
             </button>
 
             <button
@@ -272,7 +280,7 @@ export function BranchFormDialog({
               disabled={submitting}
               className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-50"
             >
-              {submitting ? "Saving..." : "Save branch"}
+              {submitting ? common.actions.saving : t.save}
             </button>
           </footer>
         </form>

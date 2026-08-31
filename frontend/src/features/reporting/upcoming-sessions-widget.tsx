@@ -3,23 +3,31 @@ import Link from "next/link";
 import type {
   UpcomingSessionSummary,
 } from "./types";
+import { useLocalization } from "../localization/use-localization";
 
 export function UpcomingSessionsWidget({
-  sessions,
+  sessions
 }: {
   sessions: UpcomingSessionSummary[];
 }) {
+
+  const {
+    dictionary,
+  } = useLocalization();
+
+  const t = dictionary.pages.dashboard;
+  const common = dictionary.common;
+
   return (
     <section className="overflow-hidden rounded-xl bg-white shadow-sm">
       <header className="flex items-center justify-between border-b p-5">
         <div>
           <h2 className="text-lg font-semibold">
-            Upcoming sessions
+            {t.upcomingSessions}
           </h2>
 
           <p className="mt-1 text-sm text-slate-600">
-            The next scheduled lessons or training
-            sessions.
+            {t.upcomingSessionsDescription}
           </p>
         </div>
 
@@ -27,13 +35,13 @@ export function UpcomingSessionsWidget({
           href="/dashboard/sessions"
           className="text-sm font-medium text-blue-700 hover:underline"
         >
-          View schedule
+          {common.actions.viewSchedule}
         </Link>
       </header>
 
       {sessions.length === 0 ? (
         <div className="p-8 text-center text-slate-500">
-          No upcoming sessions were found.
+          {t.noUpcomingSessions}
         </div>
       ) : (
         <div className="divide-y">

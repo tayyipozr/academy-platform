@@ -1,0 +1,17 @@
+[Unit]
+Description=Academy Platform Health Check
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=academy
+Group=academy
+WorkingDirectory=/opt/academy-platform
+
+Environment=ENV_FILE=.env.production
+
+ExecStart=/opt/academy-platform/infrastructure/scripts/health-check.sh
+
+NoNewPrivileges=true
+PrivateTmp=true

@@ -13,6 +13,7 @@ import {
 } from "./guardian-form-schema";
 
 import type { Guardian } from "./types";
+import { useLocalization } from "../localization/use-localization";
 
 type GuardianFormDialogProps = {
   guardian?: Guardian;
@@ -81,16 +82,23 @@ export function GuardianFormDialog({
 
   const selectableAccounts = guardian
     ? [
-        {
-          membershipId: guardian.membershipId,
-          userId: guardian.userId,
-          email: guardian.email,
-          firstName: guardian.firstName,
-          lastName: guardian.lastName,
-          membershipStatus: "ACTIVE" as const,
-        },
-      ]
+      {
+        membershipId: guardian.membershipId,
+        userId: guardian.userId,
+        email: guardian.email,
+        firstName: guardian.firstName,
+        lastName: guardian.lastName,
+        membershipStatus: "ACTIVE" as const,
+      },
+    ]
     : accounts;
+
+  const {
+    dictionary,
+  } = useLocalization();
+
+  const t = dictionary.pages.guardians;
+  const common = dictionary.common;
 
   return (
     <div
@@ -101,9 +109,7 @@ export function GuardianFormDialog({
       <div className="w-full max-w-3xl rounded-xl bg-white p-6 shadow-xl">
         <header className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">
-            {guardian
-              ? "Edit guardian profile"
-              : "Create guardian profile"}
+            {guardian ? t.edit : t.create}
           </h2>
 
           <button
@@ -112,7 +118,7 @@ export function GuardianFormDialog({
             onClick={onClose}
             className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100"
           >
-            Close
+            {common.actions.close}
           </button>
         </header>
 
@@ -122,7 +128,7 @@ export function GuardianFormDialog({
         >
           <FormField
             id="membershipId"
-            label="Guardian account"
+            label={t.guardianAccount}
             error={errors.membershipId?.message}
           >
             <select
@@ -132,7 +138,7 @@ export function GuardianFormDialog({
               {...register("membershipId")}
             >
               <option value="">
-                Select a guardian account
+                {t.selectGuardianAccount}
               </option>
 
               {selectableAccounts.map((account) => (
@@ -149,16 +155,14 @@ export function GuardianFormDialog({
 
           {!guardian && accounts.length === 0 && (
             <p className="text-sm text-amber-700">
-              No eligible guardian account is available.
-              Create or invite a guardian from the Users
-              page first.
+              {t.noEligibleAccount}
             </p>
           )}
 
           <div className="grid gap-4 md:grid-cols-2">
             <TextField
               id="guardianNumber"
-              label="Guardian number"
+              label={t.guardianNumber}
               registration={register(
                 "guardianNumber",
               )}
@@ -169,21 +173,21 @@ export function GuardianFormDialog({
 
             <TextField
               id="occupation"
-              label="Occupation"
+              label={t.occupation}
               registration={register("occupation")}
               error={errors.occupation?.message}
             />
 
             <TextField
               id="phone"
-              label="Phone"
+              label={common.fields.phone}
               registration={register("phone")}
               error={errors.phone?.message}
             />
 
             <TextField
               id="alternatePhone"
-              label="Alternate phone"
+              label={t.alternatePhone}
               registration={register(
                 "alternatePhone",
               )}
@@ -194,7 +198,7 @@ export function GuardianFormDialog({
 
             <TextField
               id="addressLine1"
-              label="Address line 1"
+              label={common.fields.addressLine1}
               registration={register(
                 "addressLine1",
               )}
@@ -203,7 +207,7 @@ export function GuardianFormDialog({
 
             <TextField
               id="addressLine2"
-              label="Address line 2"
+              label={common.fields.addressLine2}
               registration={register(
                 "addressLine2",
               )}
@@ -212,14 +216,14 @@ export function GuardianFormDialog({
 
             <TextField
               id="city"
-              label="City"
+              label={common.fields.city}
               registration={register("city")}
               error={errors.city?.message}
             />
 
             <TextField
               id="stateProvince"
-              label="State or province"
+              label={common.fields.stateProvince}
               registration={register(
                 "stateProvince",
               )}
@@ -230,14 +234,14 @@ export function GuardianFormDialog({
 
             <TextField
               id="postalCode"
-              label="Postal code"
+              label={common.fields.postalCode}
               registration={register("postalCode")}
               error={errors.postalCode?.message}
             />
 
             <TextField
               id="countryCode"
-              label="Country code"
+              label={common.fields.countryCode}
               registration={register(
                 "countryCode",
               )}
@@ -248,7 +252,7 @@ export function GuardianFormDialog({
 
           <FormField
             id="notes"
-            label="Notes"
+            label={t.notes}
             error={errors.notes?.message}
           >
             <textarea
@@ -275,7 +279,7 @@ export function GuardianFormDialog({
               onClick={onClose}
               className="rounded-lg border border-slate-300 px-4 py-2"
             >
-              Cancel
+              {common.actions.cancel}
             </button>
 
             <button
@@ -287,8 +291,8 @@ export function GuardianFormDialog({
               className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-50"
             >
               {submitting
-                ? "Saving..."
-                : "Save guardian profile"}
+                ? common.actions.saving
+                : common.actions.save}
             </button>
           </footer>
         </form>

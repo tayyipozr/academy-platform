@@ -1,6 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
+
+import {
+  useRouter,
+} from "next/navigation";
 
 import {
   useMutation,
@@ -8,8 +16,21 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
-import { DashboardHeader } from "@/components/dashboard-header";
-import { getCurrentUser } from "@/features/auth/api";
+import {
+  DashboardHeader,
+} from "@/components/dashboard-header";
+
+import {
+  useConfirmDialog,
+} from "@/components/confirm-dialog-provider";
+
+import {
+  getCurrentUser,
+} from "@/features/auth/api";
+
+import {
+  useLocalization,
+} from "@/features/localization/use-localization";
 
 import {
   createTerm,
@@ -23,7 +44,9 @@ import {
   type TermFormValues,
 } from "@/features/terms/term-form-dialog";
 
-import { termQueryKeys } from "@/features/terms/query-keys";
+import {
+  termQueryKeys,
+} from "@/features/terms/query-keys";
 
 import type {
   OperationalTerm,
@@ -31,21 +54,49 @@ import type {
   TermStatus,
 } from "@/features/terms/types";
 
-import { getApiErrorMessage } from "@/lib/api/error-message";
-import { hasPermission } from "@/lib/permissions";
+import {
+  ApiError,
+} from "@/lib/api/api-client";
+
+import {
+  getApiErrorMessage,
+} from "@/lib/api/error-message";
+
+import {
+  hasPermission,
+} from "@/lib/permissions";
 
 export default function TermsPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
+  const confirm = useConfirmDialog();
 
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [includeArchived, setIncludeArchived] =
-    useState(false);
+  const {
+    dictionary,
+    statusLabel,
+    formatDate,
+  } = useLocalization();
 
-  const [editingTerm, setEditingTerm] =
-    useState<
-      OperationalTerm | null | undefined
-    >(undefined);
+  const t = dictionary.pages.terms;
+  const common = dictionary.common;
+
+  const [searchInput, setSearchInput] =
+    useState("");
+
+  const [search, setSearch] =
+    useState("");
+
+  const [
+    includeArchived,
+    setIncludeArchived,
+  ] = useState(false);
+
+  const [
+    editingTerm,
+    setEditingTerm,
+  ] = useState<
+    OperationalTerm | null | undefined
+  >(undefined);
 
   const [formError, setFormError] =
     useState<string | null>(null);
@@ -53,12 +104,18 @@ export default function TermsPage() {
   const [pageError, setPageError] =
     useState<string | null>(null);
 
+  const [
+    updatingTermId,
+    setUpdatingTermId,
+  ] = useState<string | null>(null);
+
   const currentUserQuery = useQuery({
     queryKey: ["current-user"],
     queryFn: getCurrentUser,
   });
 
-  const currentUser = currentUserQuery.data;
+  const currentUser =
+    currentUserQuery.data;
 
   const canRead = hasPermission(
     currentUser,
@@ -75,13 +132,30 @@ export default function TermsPage() {
       search,
       includeArchived,
     ),
+
     queryFn: () =>
       getTerms({
         search,
         includeArchived,
       }),
-    enabled: currentUserQuery.isSuccess && canRead,
+
+    enabled:
+      currentUserQuery.isSuccess &&
+      canRead,
   });
+
+  useEffect(() => {
+    if (
+      currentUserQuery.error instanceof
+      ApiError &&
+      currentUserQuery.error.status === 401
+    ) {
+      router.replace("/login");
+    }
+  }, [
+    currentUserQuery.error,
+    router,
+  ]);
 
   const createMutation = useMutation({
     mutationFn: createTerm,
@@ -94,7 +168,11 @@ export default function TermsPage() {
     }: {
       termId: string;
       request: SaveTermRequest;
-    }) => updateTerm(termId, request),
+    }) =>
+      updateTerm(
+        termId,
+        request,
+      ),
   });
 
   const statusMutation = useMutation({
@@ -104,7 +182,11 @@ export default function TermsPage() {
     }: {
       termId: string;
       status: TermStatus;
-    }) => updateTermStatus(termId, status),
+    }) =>
+      updateTermStatus(
+        termId,
+        status,
+      ),
   });
 
   const formSubmitting =
@@ -115,6 +197,27 @@ export default function TermsPage() {
     await queryClient.invalidateQueries({
       queryKey: termQueryKeys.all,
     });
+  }
+
+  function openCreateDialog() {
+    setFormError(null);
+    setEditingTerm(null);
+  }
+
+  function openEditDialog(
+    term: OperationalTerm,
+  ) {
+    setFormError(null);
+    setEditingTerm(term);
+  }
+
+  function closeDialog() {
+    if (formSubmitting) {
+      return;
+    }
+
+    setEditingTerm(undefined);
+    setFormError(null);
   }
 
   async function saveTerm(
@@ -129,16 +232,19 @@ export default function TermsPage() {
           request: values,
         });
       } else {
-        await createMutation.mutateAsync(values);
+        await createMutation.mutateAsync(
+          values,
+        );
       }
 
       await refreshTerms();
+
       setEditingTerm(undefined);
     } catch (error) {
       setFormError(
         getApiErrorMessage(
           error,
-          "The term could not be saved.",
+          t.saveError,
         ),
       );
     }
@@ -146,203 +252,360 @@ export default function TermsPage() {
 
   async function changeStatus(
     term: OperationalTerm,
-    status: TermStatus,
-  ) {
+    newStatus: TermStatus,
+  ): Promise<boolean> {
+    if (term.status === newStatus) {
+      return true;
+    }
+
+    const confirmed = await confirm({
+      title: t.statusChangeTitle,
+
+      description: formatMessage(
+        t.statusChangeDescription,
+        {
+          name: term.name,
+
+          currentStatus:
+            statusLabel(term.status),
+
+          newStatus:
+            statusLabel(newStatus),
+        },
+      ),
+
+      confirmLabel:
+        newStatus === "ARCHIVED"
+          ? common.actions.archive
+          : newStatus === "ACTIVE"
+            ? common.actions.activate
+            : newStatus === "COMPLETED"
+              ? common.actions.complete
+              : common.actions.confirm,
+
+      cancelLabel:
+        common.actions.cancel,
+
+      variant:
+        newStatus === "ARCHIVED"
+          ? "danger"
+          : newStatus === "COMPLETED"
+            ? "warning"
+            : "info",
+    });
+
+    if (!confirmed) {
+      return false;
+    }
+
     setPageError(null);
+    setUpdatingTermId(term.id);
 
     try {
       await statusMutation.mutateAsync({
         termId: term.id,
-        status,
+        status: newStatus,
       });
 
       await refreshTerms();
+
+      return true;
     } catch (error) {
       setPageError(
         getApiErrorMessage(
           error,
-          "The term status could not be changed.",
+          t.statusChangeError,
         ),
       );
+
+      return false;
+    } finally {
+      setUpdatingTermId(null);
     }
   }
 
-  if (currentUserQuery.isPending) {
-    return <main className="p-8">Loading...</main>;
+  function handleSearchSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    setSearch(searchInput.trim());
   }
 
-  if (!currentUser) {
-    return null;
+  function clearSearch() {
+    setSearchInput("");
+    setSearch("");
+  }
+
+  if (currentUserQuery.isPending) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100">
+        <p className="text-slate-600">
+          {t.sessionLoading}
+        </p>
+      </main>
+    );
+  }
+
+  if (
+    currentUserQuery.isError ||
+    !currentUser
+  ) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100">
+        <div className="rounded-xl bg-red-50 p-5 text-red-700">
+          {t.sessionLoadError}
+        </div>
+      </main>
+    );
+  }
+
+  if (!canRead) {
+    return (
+      <div className="min-h-screen bg-slate-100">
+        <DashboardHeader
+          user={currentUser}
+        />
+
+        <main className="mx-auto max-w-7xl p-6">
+          <div className="rounded-xl bg-red-50 p-5 text-red-700">
+            {
+              common.messages
+                .permissionDenied
+            }
+          </div>
+        </main>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <DashboardHeader user={currentUser} />
+      <DashboardHeader
+        user={currentUser}
+      />
 
       <main className="mx-auto max-w-7xl p-6">
-        {!canRead ? (
-          <div className="rounded-xl bg-red-50 p-5 text-red-700">
-            You do not have permission to view terms.
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">
+              {t.title}
+            </h1>
+
+            <p className="mt-1 text-slate-600">
+              {t.description}
+            </p>
           </div>
-        ) : (
-          <>
-            <header className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold">
-                  Terms
-                </h1>
-                <p className="mt-1 text-slate-600">
-                  Manage academic years, semesters, and
-                  activity periods.
-                </p>
-              </div>
 
-              {canManage && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormError(null);
-                    setEditingTerm(null);
-                  }}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-white"
-                >
-                  Create term
-                </button>
-              )}
-            </header>
+          {canManage && (
+            <button
+              type="button"
+              onClick={openCreateDialog}
+              className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
+            >
+              {t.create}
+            </button>
+          )}
+        </header>
 
-            <div className="mt-6 flex flex-wrap gap-4">
-              <form
-                className="flex flex-1 gap-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  setSearch(searchInput.trim());
-                }}
+        <div className="mt-6 flex flex-wrap items-center gap-4">
+          <form
+            className="flex max-w-xl flex-1 gap-2"
+            onSubmit={handleSearchSubmit}
+          >
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(event) =>
+                setSearchInput(
+                  event.target.value,
+                )
+              }
+              placeholder={
+                t.searchPlaceholder
+              }
+              aria-label={
+                t.searchPlaceholder
+              }
+              className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2"
+            />
+
+            <button
+              type="submit"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium transition hover:bg-slate-50"
+            >
+              {common.actions.search}
+            </button>
+
+            {(search || searchInput) && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 transition hover:bg-slate-50"
               >
-                <input
-                  value={searchInput}
-                  onChange={(event) =>
-                    setSearchInput(event.target.value)
-                  }
-                  placeholder="Search terms"
-                  className="max-w-md flex-1 rounded-lg border bg-white px-3 py-2"
-                />
-                <button className="rounded-lg border bg-white px-4 py-2">
-                  Search
-                </button>
-              </form>
+                {common.actions.clear}
+              </button>
+            )}
+          </form>
 
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={includeArchived}
-                  onChange={(event) =>
-                    setIncludeArchived(
-                      event.target.checked,
-                    )
-                  }
-                />
-                Include archived
-              </label>
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={includeArchived}
+              onChange={(event) =>
+                setIncludeArchived(
+                  event.target.checked,
+                )
+              }
+            />
+
+            {t.includeArchived}
+          </label>
+        </div>
+
+        {pageError && (
+          <div
+            role="alert"
+            className="mt-5 rounded-lg bg-red-50 p-4 text-red-700"
+          >
+            {pageError}
+          </div>
+        )}
+
+        <section className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm">
+          {termsQuery.isPending && (
+            <div className="p-10 text-center text-slate-500">
+              {t.loading}
             </div>
+          )}
 
-            {pageError && (
-              <div className="mt-5 rounded-lg bg-red-50 p-4 text-red-700">
-                {pageError}
+          {termsQuery.isError && (
+            <div className="p-10 text-center text-red-600">
+              {getApiErrorMessage(
+                termsQuery.error,
+                t.loadError,
+              )}
+            </div>
+          )}
+
+          {!termsQuery.isPending &&
+            !termsQuery.isError &&
+            termsQuery.data?.length ===
+            0 && (
+              <div className="p-10 text-center text-slate-500">
+                {t.empty}
               </div>
             )}
 
-            <section className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm">
-              {termsQuery.isPending && (
-                <div className="p-10 text-center">
-                  Loading terms...
-                </div>
-              )}
+          {termsQuery.data &&
+            termsQuery.data.length > 0 && (
+              <table className="w-full min-w-[800px] text-left">
+                <thead className="border-b bg-slate-50">
+                  <tr>
+                    <th className="p-4">
+                      {t.term}
+                    </th>
 
-              {termsQuery.data?.length === 0 && (
-                <div className="p-10 text-center text-slate-500">
-                  No terms were found.
-                </div>
-              )}
+                    <th className="p-4">
+                      {t.dates}
+                    </th>
 
-              {termsQuery.data &&
-                termsQuery.data.length > 0 && (
-                  <table className="w-full min-w-[800px] text-left">
-                    <thead className="border-b bg-slate-50">
-                      <tr>
-                        <th className="p-4">Term</th>
-                        <th className="p-4">Dates</th>
-                        <th className="p-4">Status</th>
-                        <th className="p-4">Actions</th>
+                    <th className="p-4">
+                      {common.fields.status}
+                    </th>
+
+                    <th className="p-4">
+                      {common.fields.actions}
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y">
+                  {termsQuery.data.map(
+                    (term) => (
+                      <tr key={term.id}>
+                        <td className="p-4">
+                          <p className="font-medium">
+                            {term.name}
+                          </p>
+
+                          <p className="text-sm text-slate-500">
+                            {term.code}
+                          </p>
+                        </td>
+
+                        <td className="p-4">
+                          {formatDate(
+                            term.startDate,
+                          )}
+                          {" – "}
+                          {formatDate(
+                            term.endDate,
+                          )}
+                        </td>
+
+                        <td className="p-4">
+                          <TermStatusBadge
+                            status={term.status}
+                          />
+                        </td>
+
+                        <td className="p-4">
+                          {canManage && (
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                disabled={
+                                  term.status ===
+                                  "ARCHIVED"
+                                }
+                                onClick={() =>
+                                  openEditDialog(term)
+                                }
+                                className="rounded border border-slate-300 px-3 py-1.5 text-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {
+                                  common.actions
+                                    .edit
+                                }
+                              </button>
+
+                              <TermStatusActions
+                                term={term}
+                                updating={
+                                  updatingTermId ===
+                                  term.id
+                                }
+                                changeStatusLabel={
+                                  t.changeStatus
+                                }
+                                statusLabel={
+                                  statusLabel
+                                }
+                                onChange={
+                                  changeStatus
+                                }
+                              />
+                            </div>
+                          )}
+                        </td>
                       </tr>
-                    </thead>
-
-                    <tbody className="divide-y">
-                      {termsQuery.data.map((term) => (
-                        <tr key={term.id}>
-                          <td className="p-4">
-                            <p className="font-medium">
-                              {term.name}
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              {term.code}
-                            </p>
-                          </td>
-
-                          <td className="p-4">
-                            {term.startDate} – {term.endDate}
-                          </td>
-
-                          <td className="p-4">
-                            {term.status}
-                          </td>
-
-                          <td className="p-4">
-                            {canManage && (
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  disabled={
-                                    term.status ===
-                                    "ARCHIVED"
-                                  }
-                                  onClick={() => {
-                                    setFormError(null);
-                                    setEditingTerm(term);
-                                  }}
-                                  className="rounded border px-3 py-1.5 text-sm disabled:opacity-50"
-                                >
-                                  Edit
-                                </button>
-
-                                <TermStatusActions
-                                  term={term}
-                                  onChange={changeStatus}
-                                />
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-            </section>
-          </>
-        )}
+                    ),
+                  )}
+                </tbody>
+              </table>
+            )}
+        </section>
       </main>
 
       {editingTerm !== undefined && (
         <TermFormDialog
-          term={editingTerm ?? undefined}
+          term={
+            editingTerm ?? undefined
+          }
           submitting={formSubmitting}
           errorMessage={formError}
-          onClose={() => {
-            if (!formSubmitting) {
-              setEditingTerm(undefined);
-              setFormError(null);
-            }
-          }}
+          onClose={closeDialog}
           onSubmit={saveTerm}
         />
       )}
@@ -350,51 +613,157 @@ export default function TermsPage() {
   );
 }
 
-function TermStatusActions({
-  term,
-  onChange,
-}: {
+type TermStatusActionsProps = {
   term: OperationalTerm;
+  updating: boolean;
+  changeStatusLabel: string;
+
+  statusLabel: (
+    status: string,
+  ) => string;
+
   onChange: (
     term: OperationalTerm,
     status: TermStatus,
-  ) => Promise<void>;
-}) {
+  ) => Promise<boolean>;
+};
+
+function TermStatusActions({
+  term,
+  updating,
+  changeStatusLabel,
+  statusLabel,
+  onChange,
+}: TermStatusActionsProps) {
   const nextStatuses: Record<
     TermStatus,
     TermStatus[]
   > = {
-    DRAFT: ["ACTIVE", "ARCHIVED"],
-    ACTIVE: ["COMPLETED", "ARCHIVED"],
+    DRAFT: [
+      "ACTIVE",
+      "ARCHIVED",
+    ],
+
+    ACTIVE: [
+      "COMPLETED",
+      "ARCHIVED",
+    ],
+
     COMPLETED: ["ARCHIVED"],
+
     ARCHIVED: [],
   };
 
-  if (nextStatuses[term.status].length === 0) {
+  const availableStatuses =
+    nextStatuses[term.status];
+
+  if (availableStatuses.length === 0) {
     return null;
   }
 
   return (
     <select
       defaultValue=""
+      disabled={updating}
+      aria-label={changeStatusLabel}
       onChange={(event) => {
-        if (event.target.value) {
-          void onChange(
-            term,
-            event.target.value as TermStatus,
-          );
-          event.target.value = "";
-        }
-      }}
-      className="rounded border px-2 py-1.5 text-sm"
-    >
-      <option value="">Change status</option>
+        const select =
+          event.currentTarget;
 
-      {nextStatuses[term.status].map((status) => (
-        <option key={status} value={status}>
-          {status}
-        </option>
-      ))}
+        const selectedStatus =
+          select.value as
+          | TermStatus
+          | "";
+
+        if (!selectedStatus) {
+          return;
+        }
+
+        void onChange(
+          term,
+          selectedStatus,
+        ).finally(() => {
+          select.value = "";
+        });
+      }}
+      className="rounded border border-slate-300 px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <option value="">
+        {updating
+          ? commonStatusUpdatingLabel(
+            changeStatusLabel,
+          )
+          : changeStatusLabel}
+      </option>
+
+      {availableStatuses.map(
+        (status) => (
+          <option
+            key={status}
+            value={status}
+          >
+            {statusLabel(status)}
+          </option>
+        ),
+      )}
     </select>
+  );
+}
+
+function TermStatusBadge({
+  status,
+}: {
+  status: TermStatus;
+}) {
+  const {
+    statusLabel,
+  } = useLocalization();
+
+  const styles: Record<
+    TermStatus,
+    string
+  > = {
+    DRAFT:
+      "bg-amber-100 text-amber-700",
+
+    ACTIVE:
+      "bg-green-100 text-green-700",
+
+    COMPLETED:
+      "bg-blue-100 text-blue-700",
+
+    ARCHIVED:
+      "bg-slate-200 text-slate-700",
+  };
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}
+    >
+      {statusLabel(status)}
+    </span>
+  );
+}
+
+function commonStatusUpdatingLabel(
+  fallback: string,
+): string {
+  return `${fallback}...`;
+}
+
+function formatMessage(
+  message: string,
+  values: Record<
+    string,
+    string | number
+  >,
+): string {
+  return Object.entries(values).reduce(
+    (result, [key, value]) =>
+      result.replaceAll(
+        `{${key}}`,
+        String(value),
+      ),
+    message,
   );
 }

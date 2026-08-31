@@ -28,6 +28,7 @@ import { organizationQueryKeys } from "@/features/organization/query-keys";
 import { ApiError } from "@/lib/api/api-client";
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
+import { useLocalization } from "@/features/localization/use-localization";
 
 const localeOptions = [
   {
@@ -111,6 +112,16 @@ export default function OrganizationSettingsPage() {
     },
   });
 
+
+  const {
+    dictionary,
+    mediaLabel,
+    statusLabel
+  } = useLocalization();
+
+  const t = dictionary.pages.settings;
+  const common = dictionary.common;
+
   useEffect(() => {
     if (!settingsQuery.data) {
       return;
@@ -160,17 +171,24 @@ export default function OrganizationSettingsPage() {
       });
 
       await queryClient.invalidateQueries({
+        queryKey: [
+          "organization",
+          "localization",
+        ],
+      });
+
+      await queryClient.invalidateQueries({
         queryKey: ["current-user"],
       });
 
       setSuccessMessage(
-        "Organization settings were updated.",
+        t.saved,
       );
     } catch (error) {
       setErrorMessage(
         getApiErrorMessage(
           error,
-          "Organization settings could not be updated.",
+          common.messages.operationFailed,
         ),
       );
     }
@@ -179,7 +197,7 @@ export default function OrganizationSettingsPage() {
   if (currentUserQuery.isPending) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100">
-        Loading...
+        {common.messages.loading}
       </main>
     );
   }
@@ -195,8 +213,7 @@ export default function OrganizationSettingsPage() {
 
         <main className="mx-auto max-w-7xl p-6">
           <div className="rounded-xl bg-red-50 p-5 text-red-700">
-            You do not have permission to view
-            organization settings.
+            {common.messages.permissionDenied}
           </div>
         </main>
       </div>
@@ -210,18 +227,17 @@ export default function OrganizationSettingsPage() {
       <main className="mx-auto max-w-5xl p-6">
         <header>
           <h1 className="text-2xl font-bold text-slate-900">
-            Organization settings
+            {t.title}
           </h1>
 
           <p className="mt-1 text-slate-600">
-            Configure general organization information
-            and terminology.
+            {t.description}
           </p>
         </header>
 
         {settingsQuery.isPending && (
           <div className="mt-6 rounded-xl bg-white p-8 shadow-sm">
-            Loading settings...
+            {common.messages.loading}
           </div>
         )}
 
@@ -229,7 +245,7 @@ export default function OrganizationSettingsPage() {
           <div className="mt-6 rounded-xl bg-red-50 p-5 text-red-700">
             {getApiErrorMessage(
               settingsQuery.error,
-              "Organization settings could not be loaded.",
+              common.messages.operationFailed,
             )}
           </div>
         )}
@@ -241,7 +257,7 @@ export default function OrganizationSettingsPage() {
           >
             <section className="rounded-xl bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold">
-                General information
+                {t.generalInformation}
               </h2>
 
               <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -250,7 +266,7 @@ export default function OrganizationSettingsPage() {
                     htmlFor="name"
                     className="block text-sm font-medium"
                   >
-                    Organization name
+                    {t.organizationName}
                   </label>
 
                   <input
@@ -272,7 +288,7 @@ export default function OrganizationSettingsPage() {
                     htmlFor="defaultLocale"
                     className="block text-sm font-medium"
                   >
-                    Default language
+                    {t.defaultLanguage}
                   </label>
 
                   <select
@@ -297,7 +313,7 @@ export default function OrganizationSettingsPage() {
                     htmlFor="timezone"
                     className="block text-sm font-medium"
                   >
-                    Timezone
+                    {common.fields.timezone}
                   </label>
 
                   <select
@@ -325,7 +341,7 @@ export default function OrganizationSettingsPage() {
 
                 <div className="md:col-span-2">
                   <p className="text-sm text-slate-500">
-                    Organization identifier:{" "}
+                    {dictionary.pages.login.organization} {common.fields.code}:{" "}
                     <strong>
                       {settingsQuery.data.slug}
                     </strong>
@@ -336,18 +352,17 @@ export default function OrganizationSettingsPage() {
 
             <section className="rounded-xl bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold">
-                Configurable terminology
+                {t.terminology}
               </h2>
 
               <p className="mt-1 text-sm text-slate-600">
-                Customize how common platform concepts
-                appear to users.
+                {t.terminologyDescription}
               </p>
 
               <div className="mt-5 grid gap-5 md:grid-cols-2">
                 <TerminologyField
                   id="studentLabel"
-                  label="Student label"
+                  label={t.studentLabel}
                   example="Student, Athlete, Participant"
                   disabled={!canUpdateSettings}
                   error={
@@ -361,7 +376,7 @@ export default function OrganizationSettingsPage() {
 
                 <TerminologyField
                   id="staffLabel"
-                  label="Staff label"
+                  label={t.staffLabel}
                   example="Instructor, Coach, Teacher"
                   disabled={!canUpdateSettings}
                   error={
@@ -375,7 +390,7 @@ export default function OrganizationSettingsPage() {
 
                 <TerminologyField
                   id="groupLabel"
-                  label="Group label"
+                  label={t.groupLabel}
                   example="Group, Team, Class"
                   disabled={!canUpdateSettings}
                   error={
@@ -389,7 +404,7 @@ export default function OrganizationSettingsPage() {
 
                 <TerminologyField
                   id="sessionLabel"
-                  label="Session label"
+                  label={t.sessionLabel}
                   example="Session, Training, Lesson"
                   disabled={!canUpdateSettings}
                   error={
@@ -403,7 +418,7 @@ export default function OrganizationSettingsPage() {
 
                 <TerminologyField
                   id="programLabel"
-                  label="Program label"
+                  label={t.programLabel}
                   example="Program, Sport, Department"
                   disabled={!canUpdateSettings}
                   error={
@@ -446,8 +461,8 @@ export default function OrganizationSettingsPage() {
                   className="rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {updateMutation.isPending
-                    ? "Saving..."
-                    : "Save settings"}
+                    ? common.actions.saving
+                    : t.save}
                 </button>
               </div>
             )}

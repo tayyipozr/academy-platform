@@ -35,6 +35,7 @@ import type {
 import { ApiError } from "@/lib/api/api-client";
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { hasPermission } from "@/lib/permissions";
+import { useLocalization } from "@/features/localization/use-localization";
 
 export default function StudentsPage() {
   const router = useRouter();
@@ -97,6 +98,17 @@ export default function StudentsPage() {
       currentUserQuery.isSuccess &&
       hasPermission(currentUser, "branches.read"),
   });
+
+  const {
+    dictionary,
+    statusLabel,
+    formatDate,
+  } = useLocalization();
+
+  const t = dictionary.pages.students;
+  const common = dictionary.common;
+
+  const studentLabel = common.fields.student;
 
   useEffect(() => {
     if (
@@ -246,7 +258,7 @@ export default function StudentsPage() {
   if (currentUserQuery.isPending) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100">
-        Loading...
+        {t.loading}
       </main>
     );
   }
@@ -262,19 +274,18 @@ export default function StudentsPage() {
       <main className="mx-auto max-w-7xl p-6">
         {!canRead ? (
           <div className="rounded-xl bg-red-50 p-5 text-red-700">
-            You do not have permission to view students.
+            {dictionary.common.messages.permissionDenied}
           </div>
         ) : (
           <>
             <header className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold">
-                  Students
+                  {studentLabel}
                 </h1>
 
                 <p className="mt-1 text-slate-600">
-                  Manage student records, emergency
-                  information, and guardian connections.
+                  {t.description}
                 </p>
               </div>
 
@@ -284,7 +295,7 @@ export default function StudentsPage() {
                   onClick={openCreate}
                   className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white"
                 >
-                  Create student
+                  {t.create}
                 </button>
               )}
             </header>
@@ -305,7 +316,7 @@ export default function StudentsPage() {
                       event.target.value,
                     )
                   }
-                  placeholder="Search by name or student number"
+                  placeholder={t.searchPlaceholder}
                   className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2"
                 />
 
@@ -313,7 +324,7 @@ export default function StudentsPage() {
                   type="submit"
                   className="rounded-lg border border-slate-300 bg-white px-4 py-2"
                 >
-                  Search
+                  {dictionary.common.actions.search}
                 </button>
 
                 {(search || searchInput) && (
@@ -325,7 +336,7 @@ export default function StudentsPage() {
                     }}
                     className="rounded-lg border border-slate-300 bg-white px-4 py-2"
                   >
-                    Clear
+                    {dictionary.common.actions.clear}
                   </button>
                 )}
               </form>
@@ -341,7 +352,7 @@ export default function StudentsPage() {
                   }
                 />
 
-                Include archived
+                {common.filters.includeArchived}
               </label>
             </div>
 
@@ -357,7 +368,7 @@ export default function StudentsPage() {
             <section className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm">
               {studentsQuery.isPending && (
                 <div className="p-10 text-center">
-                  Loading students...
+                  {t.loading}
                 </div>
               )}
 
@@ -371,7 +382,7 @@ export default function StudentsPage() {
 
               {studentsQuery.data?.length === 0 && (
                 <div className="p-10 text-center text-slate-500">
-                  No students were found.
+                  {t.empty}
                 </div>
               )}
 
@@ -381,25 +392,25 @@ export default function StudentsPage() {
                     <thead className="border-b bg-slate-50">
                       <tr>
                         <th className="p-4">
-                          Student
+                          {common.fields.student}
                         </th>
                         <th className="p-4">
-                          Student number
+                          {t.studentNumber}
                         </th>
                         <th className="p-4">
-                          Branch
+                          {common.fields.branch}
                         </th>
                         <th className="p-4">
-                          Birth date
+                          {t.birthDate}
                         </th>
                         <th className="p-4">
-                          Guardians
+                          {common.fields.guardian}
                         </th>
                         <th className="p-4">
-                          Status
+                          {common.fields.status}
                         </th>
                         <th className="p-4">
-                          Actions
+                          {common.fields.actions}
                         </th>
                       </tr>
                     </thead>
@@ -431,9 +442,7 @@ export default function StudentsPage() {
 
                             <td className="p-4">
                               {student.birthDate
-                                ? new Date(
-                                    `${student.birthDate}T00:00:00`,
-                                  ).toLocaleDateString()
+                                ? formatDate(student.birthDate,)
                                 : "—"}
                             </td>
 
@@ -455,7 +464,7 @@ export default function StudentsPage() {
                                   href={`/dashboard/students/${student.id}`}
                                   className="rounded border px-3 py-1.5 text-sm"
                                 >
-                                  View
+                                  {common.actions.view}
                                 </Link>
 
                                 {canManage && (
@@ -469,7 +478,7 @@ export default function StudentsPage() {
                                       }
                                       className="rounded border px-3 py-1.5 text-sm"
                                     >
-                                      Edit
+                                      {common.actions.edit}
                                     </button>
 
                                     <select
@@ -492,16 +501,16 @@ export default function StudentsPage() {
                                       className="rounded border px-2 py-1.5 text-sm"
                                     >
                                       <option value="ACTIVE">
-                                        Active
+                                        {common.statuses.ACTIVE}
                                       </option>
                                       <option value="INACTIVE">
-                                        Inactive
+                                        {common.statuses.INACTIVE}
                                       </option>
                                       <option value="GRADUATED">
-                                        Graduated
+                                        {common.statuses.GRADUATED}
                                       </option>
                                       <option value="ARCHIVED">
-                                        Archived
+                                        {common.statuses.ARCHIVED}
                                       </option>
                                     </select>
                                   </>

@@ -6,6 +6,7 @@ import type {
   LessonSession,
   SessionStatus,
 } from "./types";
+import { useLocalization } from "../localization/use-localization";
 
 type SessionTableProps = {
   sessions: LessonSession[];
@@ -27,10 +28,20 @@ export function SessionTable({
   onReschedule,
   onStatusChange,
 }: SessionTableProps) {
+
+  const {
+    dictionary,
+    formatDateTime,
+    formatDate,
+  } = useLocalization();
+
+  const t = dictionary.pages.schedule;
+  const common = dictionary.common;
+
   if (sessions.length === 0) {
     return (
       <div className="p-10 text-center text-slate-500">
-        No sessions were found.
+        {t.empty}
       </div>
     );
   }
@@ -40,15 +51,15 @@ export function SessionTable({
       <table className="w-full min-w-[1100px] text-left">
         <thead className="border-b bg-slate-50">
           <tr>
-            <th className="p-4">Session</th>
-            <th className="p-4">Group</th>
-            <th className="p-4">Date and time</th>
-            <th className="p-4">Instructor</th>
+            <th className="p-4">{common.fields.session}</th>
+            <th className="p-4">{common.fields.group}</th>
+            <th className="p-4">{common.fields.date}</th>
+            <th className="p-4">{common.fields.instructor}</th>
             <th className="p-4">
-              Curriculum unit
+              {t.curriculumUnit}
             </th>
-            <th className="p-4">Status</th>
-            <th className="p-4">Actions</th>
+            <th className="p-4">{common.fields.status}</th>
+            <th className="p-4">{common.fields.actions}</th>
           </tr>
         </thead>
 
@@ -66,7 +77,7 @@ export function SessionTable({
 
                 {session.scheduleRuleId && (
                   <p className="text-xs text-slate-400">
-                    Generated session
+                    {t.generatedSession}
                   </p>
                 )}
               </td>
@@ -85,26 +96,15 @@ export function SessionTable({
               </td>
 
               <td className="p-4 text-sm">
-                <p>
-                  {new Date(
-                    session.scheduledStart,
-                  ).toLocaleDateString()}
-                </p>
-
                 <p className="text-slate-500">
-                  {new Date(
+                  {formatDateTime(
                     session.scheduledStart,
-                  ).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  )}
                   {" – "}
-                  {new Date(
+                  <br></br>
+                  {formatDateTime(
                     session.scheduledEnd,
-                  ).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  )}
                 </p>
               </td>
 
@@ -123,7 +123,7 @@ export function SessionTable({
                 />
               </td>
 
-              <div className="flex flex-wrap gap-2">
+              <td className="flex flex-wrap gap-2 p-4">
                 {canReadAttendance &&
                   !["CANCELLED", "POSTPONED"].includes(
                     session.status,
@@ -132,7 +132,7 @@ export function SessionTable({
                       href={`/dashboard/sessions/${session.id}/attendance`}
                       className="rounded border border-green-300 px-3 py-1.5 text-sm text-green-700"
                     >
-                      Attendance
+                      {common.fields.attendance}
                     </Link>
                   )}
 
@@ -143,7 +143,7 @@ export function SessionTable({
                     onStatusChange={onStatusChange}
                   />
                 )}
-              </div>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -192,6 +192,13 @@ function SessionActions({
     "POSTPONED",
   ].includes(session.status);
 
+  const {
+    dictionary,
+    statusLabel,
+  } = useLocalization();
+  const t = dictionary.pages.schedule;
+
+
   return (
     <div className="flex flex-wrap gap-2">
       {canReschedule && (
@@ -200,7 +207,7 @@ function SessionActions({
           onClick={() => onReschedule(session)}
           className="rounded border px-3 py-1.5 text-sm"
         >
-          Reschedule
+          {t.reschedule}
         </button>
       )}
 
@@ -219,7 +226,7 @@ function SessionActions({
           }}
           className="rounded border px-2 py-1.5 text-sm"
         >
-          <option value="">Change status</option>
+          <option value="">{t.updateStatus}</option>
 
           {transitions[session.status].map(
             (status) => (
@@ -227,7 +234,7 @@ function SessionActions({
                 key={status}
                 value={status}
               >
-                {status.replaceAll("_", " ")}
+                {statusLabel(status)}
               </option>
             ),
           )}
@@ -242,6 +249,11 @@ function SessionStatusBadge({
 }: {
   status: SessionStatus;
 }) {
+
+  const {
+    statusLabel,
+  } = useLocalization();
+
   const styles: Record<
     SessionStatus,
     string
@@ -262,7 +274,7 @@ function SessionStatusBadge({
     <span
       className={`rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}
     >
-      {status.replaceAll("_", " ")}
+      {statusLabel(status)}
     </span>
   );
 }

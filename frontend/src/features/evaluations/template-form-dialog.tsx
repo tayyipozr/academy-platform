@@ -15,6 +15,7 @@ import {
 import type {
   EvaluationTemplate,
 } from "./types";
+import { useLocalization } from "../localization/use-localization";
 
 type TemplateFormDialogProps = {
   template?: EvaluationTemplate;
@@ -76,6 +77,14 @@ export function TemplateFormDialog({
     });
   }, [reset, template]);
 
+
+  const {
+    dictionary,
+  } = useLocalization();
+
+  const t = dictionary.pages.evaluationTemplates;
+  const common = dictionary.common;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4"
@@ -90,8 +99,8 @@ export function TemplateFormDialog({
             className="text-xl font-semibold"
           >
             {template
-              ? "Edit evaluation template"
-              : "Create evaluation template"}
+              ? t.edit
+              : t.create}
           </h2>
 
           <button
@@ -100,7 +109,7 @@ export function TemplateFormDialog({
             onClick={onClose}
             className="rounded px-2 py-1 text-slate-500"
           >
-            Close
+            {common.actions.close}
           </button>
         </header>
 
@@ -121,7 +130,7 @@ export function TemplateFormDialog({
                 {...register("programId")}
               >
                 <option value="">
-                  Select a program
+                  {dictionary.pages.programs.select}
                 </option>
 
                 {programs
@@ -142,7 +151,7 @@ export function TemplateFormDialog({
 
             <FormField
               id="templateCode"
-              label="Template code"
+              label={t.templateCode}
               error={errors.code?.message}
             >
               <input
@@ -154,7 +163,7 @@ export function TemplateFormDialog({
 
             <FormField
               id="templateName"
-              label="Template name"
+              label={t.templateName}
               error={errors.name?.message}
             >
               <input
@@ -166,7 +175,7 @@ export function TemplateFormDialog({
 
             <FormField
               id="templateVersion"
-              label="Version"
+              label={common.fields.version}
               error={
                 errors.versionLabel?.message
               }
@@ -182,13 +191,13 @@ export function TemplateFormDialog({
 
           <section>
             <h3 className="font-semibold">
-              Scoring range
+              {t.scoringRange}
             </h3>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-3">
               <FormField
                 id="minimumScore"
-                label="Minimum score"
+                label={common.fields.minimumScore}
                 error={
                   errors.minimumScore?.message
                 }
@@ -204,7 +213,7 @@ export function TemplateFormDialog({
 
               <FormField
                 id="maximumScore"
-                label="Maximum score"
+                label={common.fields.maximumScore}
                 error={
                   errors.maximumScore?.message
                 }
@@ -220,7 +229,7 @@ export function TemplateFormDialog({
 
               <FormField
                 id="passingScore"
-                label="Passing score"
+                label={common.fields.passingScore}
                 error={
                   errors.passingScore?.message
                 }
@@ -239,7 +248,7 @@ export function TemplateFormDialog({
 
           <FormField
             id="templateDescription"
-            label="Description"
+            label={common.fields.description}
             error={errors.description?.message}
           >
             <textarea
@@ -266,7 +275,7 @@ export function TemplateFormDialog({
               onClick={onClose}
               className="rounded-lg border px-4 py-2"
             >
-              Cancel
+              {common.actions.cancel}
             </button>
 
             <button
@@ -275,8 +284,8 @@ export function TemplateFormDialog({
               className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-50"
             >
               {submitting
-                ? "Saving..."
-                : "Save template"}
+                ? common.actions.saving
+                : common.actions.save}
             </button>
           </footer>
         </form>
